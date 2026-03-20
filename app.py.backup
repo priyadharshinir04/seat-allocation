@@ -1,0 +1,979 @@
+import os
+import pandas as pd
+import numpy as np
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from werkzeug.utils import secure_filename
+from itertools import combinations
+
+app = Flask(__name__)
+app.secret_key = "college_seating_secret_key"
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'}
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Ensure upload folder exists
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+# In-memory storage for simplicity (replace with DB for production)
+students_data = []
+allocation_results = []
+
+# Session storage for on-campus configuration
+exam_config = {}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def validate_student_data(df):
+    """Validate and clean student data"""
+    # Check for required columns (case-insensitive)
+    new_columns = {}
+    for col in df.columns:
+        col_lower = col.lower().strip()
+        if col_lower == 'register number':
+            new_columns[col] = 'Register Number'
+        elif col_lower in ['candidate name', 'student name', 'name']:
+            new_columns[col] = 'Candidate Name'
+        elif col_lower == 'department':
+            new_columns[col] = 'Department'
+        elif 'year' in col_lower or col_lower in ['batch', 'sem']:
+            new_columns[col] = 'Year'
+        else:
+            new_columns[col] = col
+    
+    df = df.rename(columns=new_columns)
+    
+    required_columns = ['Register Number', 'Candidate Name', 'Department']
+    missing_cols = [col for col in required_columns if col not in df.columns]
+    if missing_cols:
+        return None, f"Missing columns: {', '.join(missing_cols)}"
+    
+    # Remove rows with missing values in required columns
+    df = df.dropna(subset=required_columns)
+    
+    # Parse Year column if it exists
+    if 'Year' in df.columns:
+        def parse_year(year_val):
+            if pd.isna(year_val):
+                return '0'
+            year_str = str(year_val).strip().lower()
+            # Handle "2nd Year", "3rd Year", "4th Year", "1st Year" format
+            year_str = year_str.replace('st ', '') \
+                              .replace('nd ', '') \
+                              .replace('rd ', '') \
+                              .replace('th ', '') \
+                              .replace('year', '') \
+                              .strip()
+            # Extract first digit
+            for char in year_str:
+                if char.isdigit():
+                    return char
+            return '0'
+        
+        df['Year'] = df['Year'].apply(parse_year)
+    
+    # Remove duplicates
+    df = df.drop_duplicates(subset=['Register Number'])
+    
+    # Reset index
+    df = df.reset_index(drop=True)
+    
+    return df, None
+
+def internal_exam_allocation(students_df):
+    """
+    Internal Exam Allocation - 2 students per bench
+    - 20 benches per classroom = 40 students per classroom
+    - Each bench: 2 students from different departments and different years
+    """
+    if students_df is None or students_df.empty:
+        return None, "No students to allocate"
+    
+    df = students_df.sample(frac=1).reset_index(drop=True)
+    
+    # Group by Department + Year
+    groups = {}
+    for (dept, year), group in df.groupby(['Department', 'Year']):
+        group_list = []
+        for _, row in group.iterrows():
+            group_list.append({
+                'register_number': row['Register Number'],
+                'candidate_name': row['Candidate Name'],
+                'department': row['Department'],
+                'year': str(year)
+            })
+        groups[(dept, year)] = group_list
+    
+    # Create valid pairs (dept1 ≠ dept2 AND year1 ≠ year2)
+    valid_pairs = []
+    for g1, g2 in combinations(groups.keys(), 2):
+        dept1, year1 = g1
+        dept2, year2 = g2
+        if dept1 != dept2 and year1 != year2:
+            valid_pairs.append((g1, g2))
+    
+    allocation = []
+    room_no = 1
+    bench_no = 1
+    
+    # Allocate benches using valid pairs
+    for (g1, g2) in valid_pairs:
+        if not groups[g1] or not groups[g2]:
+            continue
+        
+        while groups[g1] and groups[g2]:
+            # Assign 2 students per bench
+            student1 = groups[g1].pop()
+            student2 = groups[g2].pop()
+            
+            # Left seat
+            allocation.append({
+                'register_number': student1['register_number'],
+                'candidate_name': student1['candidate_name'],
+                'department': student1['department'],
+                'year': student1['year'],
+                'room_number': room_no,
+                'bench_number': bench_no,
+                'seat_position': 'Left'
+            })
+            
+            # Right seat
+            allocation.append({
+                'register_number': student2['register_number'],
+                'candidate_name': student2['candidate_name'],
+                'department': student2['department'],
+                'year': student2['year'],
+                'room_number': room_no,
+                'bench_number': bench_no,
+                'seat_position': 'Right'
+            })
+            
+            bench_no += 1
+            if bench_no > 20:  # Move to next classroom after 20 benches
+                room_no += 1
+                bench_no = 1
+    
+    # Handle remaining students (same-year pairs)
+    remaining_groups = {}
+    for group_key, group_list in groups.items():
+        if group_list:
+            remaining_groups[group_key] = group_list
+    
+    year_based_pairs = []
+    for g1, g2 in combinations(remaining_groups.keys(), 2):
+        dept1, year1 = g1
+        dept2, year2 = g2
+        if year1 != year2 and remaining_groups[g1] and remaining_groups[g2]:
+            year_based_pairs.append((g1, g2))
+    
+    for (g1, g2) in year_based_pairs:
+        if not remaining_groups[g1] or not remaining_groups[g2]:
+            continue
+        
+        while remaining_groups[g1] and remaining_groups[g2]:
+            student1 = remaining_groups[g1].pop()
+            student2 = remaining_groups[g2].pop()
+            
+            allocation.append({
+                'register_number': student1['register_number'],
+                'candidate_name': student1['candidate_name'],
+                'department': student1['department'],
+                'year': student1['year'],
+                'room_number': room_no,
+                'bench_number': bench_no,
+                'seat_position': 'Left'
+            })
+            
+            allocation.append({
+                'register_number': student2['register_number'],
+                'candidate_name': student2['candidate_name'],
+                'department': student2['department'],
+                'year': student2['year'],
+                'room_number': room_no,
+                'bench_number': bench_no,
+                'seat_position': 'Right'
+            })
+            
+            bench_no += 1
+            if bench_no > 20:
+                room_no += 1
+                bench_no = 1
+    
+    # Final remaining (same bench may have same dept if necessary)
+    absolute_remaining = []
+    for group_list in remaining_groups.values():
+        absolute_remaining.extend(group_list)
+    
+    i = 0
+    while i < len(absolute_remaining):
+        if i + 1 < len(absolute_remaining):
+            student1 = absolute_remaining[i]
+            student2 = absolute_remaining[i + 1]
+            
+            allocation.append({
+                'register_number': student1['register_number'],
+                'candidate_name': student1['candidate_name'],
+                'department': student1['department'],
+                'year': student1['year'],
+                'room_number': room_no,
+                'bench_number': bench_no,
+                'seat_position': 'Left'
+            })
+            
+            allocation.append({
+                'register_number': student2['register_number'],
+                'candidate_name': student2['candidate_name'],
+                'department': student2['department'],
+                'year': student2['year'],
+                'room_number': room_no,
+                'bench_number': bench_no,
+                'seat_position': 'Right'
+            })
+            
+            bench_no += 1
+            if bench_no > 20:
+                room_no += 1
+                bench_no = 1
+            
+            i += 2
+        else:
+            # Odd student - place alone on bench
+            student = absolute_remaining[i]
+            allocation.append({
+                'register_number': student['register_number'],
+                'candidate_name': student['candidate_name'],
+                'department': student['department'],
+                'year': student['year'],
+                'room_number': room_no,
+                'bench_number': bench_no,
+                'seat_position': 'Left'
+            })
+            
+            bench_no += 1
+            if bench_no > 20:
+                room_no += 1
+                bench_no = 1
+            
+            i += 1
+    
+    return allocation, None
+
+def semester_exam_allocation(students_df):
+    """
+    Semester Exam Allocation - 1 student per bench
+    - 20 benches per classroom = 20 students per classroom
+    - Each bench: 1 student
+    - Adjacent benches should prefer different departments
+    """
+    if students_df is None or students_df.empty:
+        return None, "No students to allocate"
+    
+    df = students_df.sample(frac=1).reset_index(drop=True)
+    
+    allocation = []
+    room_no = 1
+    bench_no = 1
+    last_dept = None
+    
+    for _, row in df.iterrows():
+        # Try to alternate departments
+        current_dept = row['Department']
+        
+        allocation.append({
+            'register_number': row['Register Number'],
+            'candidate_name': row['Candidate Name'],
+            'department': row['Department'],
+            'year': str(row.get('Year', '0')),
+            'room_number': room_no,
+            'bench_number': bench_no
+        })
+        
+        last_dept = current_dept
+        bench_no += 1
+        
+        if bench_no > 20:  # Move to next classroom after 20 benches
+            room_no += 1
+            bench_no = 1
+            last_dept = None
+    
+    return allocation, None
+
+def perform_seat_allocation(num_classrooms, seats_per_classroom, students_df, exam_type='semester'):
+    """
+    Main allocation function that dispatches based on exam type
+    """
+    if exam_type == 'internal':
+        return internal_exam_allocation(students_df)
+    else:  # semester
+        return semester_exam_allocation(students_df)
+
+def perform_seat_allocation_legacy(num_classrooms, seats_per_classroom, students_df):
+    """
+    Legacy seat allocation algorithm (for backward compatibility)
+    - Groups by Department + Year
+    - Creates valid pairs where dept1 != dept2 AND year1 != year2
+    - Alternates filling from both groups
+    - Allocates each student ONLY ONCE
+    """
+    if students_df is None or students_df.empty:
+        return None, "No students to allocate"
+    
+    # Step 1: Shuffle data
+    df = students_df.sample(frac=1).reset_index(drop=True)
+    
+    # Step 2: Group by Department + Year
+    groups = {}
+    for (dept, year), group in df.groupby(['Department', 'Year']):
+        group_list = []
+        for _, row in group.iterrows():
+            group_list.append({
+                'register_number': row['Register Number'],
+                'candidate_name': row['Candidate Name'],
+                'department': row['Department'],
+                'year': str(year)
+            })
+        groups[(dept, year)] = group_list
+    
+    # Step 3: Create valid pairs (2 dept + 2 different years)
+    valid_pairs = []
+    for g1, g2 in combinations(groups.keys(), 2):
+        dept1, year1 = g1
+        dept2, year2 = g2
+        
+        if dept1 != dept2 and year1 != year2:
+            valid_pairs.append((g1, g2))
+    
+    allocation = []
+    allocated_count = 0
+    total_students = len(df)
+    room_no = 1
+    
+    # Step 4: Allocate classrooms using valid pairs
+    for (g1, g2) in valid_pairs:
+        # Check if groups still have students (they might be empty)
+        if not groups[g1] or not groups[g2]:
+            continue
+        
+        room_students = []
+        
+        # Alternate filling - pop from end to get students
+        while len(room_students) < seats_per_classroom and (groups[g1] or groups[g2]):
+            if groups[g1] and len(room_students) < seats_per_classroom:
+                student = groups[g1].pop()  # Remove from original list
+                room_students.append(student)
+                allocated_count += 1
+            
+            if groups[g2] and len(room_students) < seats_per_classroom:
+                student = groups[g2].pop()  # Remove from original list
+                room_students.append(student)
+                allocated_count += 1
+        
+        # Assign seat numbers
+        for i, student in enumerate(room_students):
+            allocation.append({
+                'register_number': student['register_number'],
+                'candidate_name': student['candidate_name'],
+                'department': student['department'],
+                'year': student['year'],
+                'room_number': room_no,
+                'seat_number': i + 1
+            })
+        
+        room_no += 1
+    
+    # Step 5: Handle REMAINING students (who don't fit in valid pairs)
+    # Re-group remaining students to pair them smartly
+    remaining_groups = {}
+    for group_key, group_list in groups.items():
+        if group_list:  # If this group still has students
+            remaining_groups[group_key] = group_list
+    
+    # Try to create valid pairs from remaining groups (different dept + different year)
+    remaining_pairs = []
+    for g1, g2 in combinations(remaining_groups.keys(), 2):
+        dept1, year1 = g1
+        dept2, year2 = g2
+        
+        if dept1 != dept2 and year1 != year2 and remaining_groups[g1] and remaining_groups[g2]:
+            remaining_pairs.append((g1, g2))
+    
+    # Allocate remaining valid pairs (strict pairing)
+    for (g1, g2) in remaining_pairs:
+        if not remaining_groups[g1] or not remaining_groups[g2]:
+            continue
+        
+        room_students = []
+        
+        # Alternate filling from remaining groups
+        while len(room_students) < seats_per_classroom and (remaining_groups[g1] or remaining_groups[g2]):
+            if remaining_groups[g1] and len(room_students) < seats_per_classroom:
+                student = remaining_groups[g1].pop()
+                room_students.append(student)
+            
+            if remaining_groups[g2] and len(room_students) < seats_per_classroom:
+                student = remaining_groups[g2].pop()
+                room_students.append(student)
+        
+        if room_students:
+            for i, student in enumerate(room_students):
+                allocation.append({
+                    'register_number': student['register_number'],
+                    'candidate_name': student['candidate_name'],
+                    'department': student['department'],
+                    'year': student['year'],
+                    'room_number': room_no,
+                    'seat_number': i + 1
+                })
+            room_no += 1
+    
+    # Step 6: After strict pairing, handle any FINAL remaining students
+    # Allow pairing by year ONLY (same dept but different years)
+    final_remaining_groups = {}
+    for group_key, group_list in remaining_groups.items():
+        if group_list:
+            final_remaining_groups[group_key] = group_list
+    
+    # Try pairing by year (allow same dept but different year)
+    year_based_pairs = []
+    for g1, g2 in combinations(final_remaining_groups.keys(), 2):
+        dept1, year1 = g1
+        dept2, year2 = g2
+        
+        # Allow if different years (regardless of dept)
+        if year1 != year2 and final_remaining_groups[g1] and final_remaining_groups[g2]:
+            year_based_pairs.append((g1, g2))
+    
+    # Allocate year-based pairs
+    for (g1, g2) in year_based_pairs:
+        if not final_remaining_groups[g1] or not final_remaining_groups[g2]:
+            continue
+        
+        room_students = []
+        
+        while len(room_students) < seats_per_classroom and (final_remaining_groups[g1] or final_remaining_groups[g2]):
+            if final_remaining_groups[g1] and len(room_students) < seats_per_classroom:
+                student = final_remaining_groups[g1].pop()
+                room_students.append(student)
+            
+            if final_remaining_groups[g2] and len(room_students) < seats_per_classroom:
+                student = final_remaining_groups[g2].pop()
+                room_students.append(student)
+        
+        if room_students:
+            for i, student in enumerate(room_students):
+                allocation.append({
+                    'register_number': student['register_number'],
+                    'candidate_name': student['candidate_name'],
+                    'department': student['department'],
+                    'year': student['year'],
+                    'room_number': room_no,
+                    'seat_number': i + 1
+                })
+            room_no += 1
+    
+    # Step 7: Any absolutely final remaining (edge case with few students)
+    absolute_remaining = []
+    for group_list in final_remaining_groups.values():
+        absolute_remaining.extend(group_list)
+    
+    if absolute_remaining:
+        i = 0
+        while i < len(absolute_remaining):
+            room_students = absolute_remaining[i:i+seats_per_classroom]
+            
+            for j, student in enumerate(room_students):
+                allocation.append({
+                    'register_number': student['register_number'],
+                    'candidate_name': student['candidate_name'],
+                    'department': student['department'],
+                    'year': student['year'],
+                    'room_number': room_no,
+                    'seat_number': j + 1
+                })
+            
+            room_no += 1
+            i += seats_per_classroom
+    
+    return allocation, None
+
+def get_department_colors():
+    """Return a mapping of departments to colors"""
+    colors = {
+        'CS': '#FF6B6B',
+        'IT': '#4ECDC4',
+        'EC': '#45B7D1',
+        'ME': '#FFA07A',
+        'CE': '#98D8C8',
+        'EE': '#F7DC6F',
+        'Other': '#BDC3C7'
+    }
+    return colors
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/admin-login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+        
+        # Simple credential check (replace with database validation in production)
+        if username == 'admin' and password == 'admin123':
+            flash('Admin login successful!', 'success')
+            return redirect(url_for('campus_selection'))
+        else:
+            flash('Invalid username or password!', 'error')
+    
+    return render_template('admin-login.html')
+
+@app.route('/campus-selection')
+def campus_selection():
+    return render_template('campus-selection.html')
+
+@app.route('/oncampus-config', methods=['GET', 'POST'])
+def oncampus_config():
+    """ON-CAMPUS CONFIGURATION PAGE - Step 1"""
+    if request.method == 'POST':
+        try:
+            college_name = request.form.get('college_name', '').strip()
+            exam_type = request.form.get('exam_type', '').strip()
+            num_classrooms = int(request.form.get('num_classrooms', 0))
+            seats_per_classroom = int(request.form.get('seats_per_classroom', 0))
+            
+            if not college_name or not exam_type or num_classrooms <= 0 or seats_per_classroom <= 0:
+                flash('Please enter valid values for all fields!', 'error')
+                return render_template('oncampus_config.html')
+            
+            if exam_type not in ['internal', 'semester']:
+                flash('Invalid exam type selected!', 'error')
+                return render_template('oncampus_config.html')
+            
+            # Store in session
+            session['exam_config'] = {
+                'college_name': college_name,
+                'exam_type': exam_type,
+                'num_classrooms': num_classrooms,
+                'seats_per_classroom': seats_per_classroom,
+                'total_seats': num_classrooms * seats_per_classroom
+            }
+            session.modified = True
+            
+            exam_mode = 'Internal Exam (40 per classroom)' if exam_type == 'internal' else 'Semester Exam (20 per classroom)'
+            flash(f'✓ Configuration saved! Mode: {exam_mode} | Total capacity: {num_classrooms * seats_per_classroom} seats', 'success')
+            return redirect(url_for('candidate_upload'))
+        except ValueError:
+            flash('Please enter valid numbers!', 'error')
+    
+    config = session.get('exam_config', {})
+    return render_template('oncampus_config.html', config=config)
+
+@app.route('/candidate-upload', methods=['GET', 'POST'])
+def candidate_upload():
+    """CANDIDATE UPLOAD SYSTEM - Step 2"""
+    config = session.get('exam_config', {})
+    if not config:
+        flash('Please configure exam details first!', 'error')
+        return redirect(url_for('oncampus_config'))
+    
+    if request.method == 'POST':
+        global students_data
+        
+        if 'file' not in request.files:
+            flash('No file selected!', 'error')
+            return render_template('upload.html', config=config)
+        
+        file = request.files['file']
+        if file.filename == '':
+            flash('No file selected!', 'error')
+            return render_template('upload.html', config=config)
+        
+        if not allowed_file(file.filename):
+            flash('Invalid file type. Please upload .xlsx, .xls, or .csv file', 'error')
+            return render_template('upload.html', config=config)
+        
+        try:
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            
+            # Read file based on extension
+            file_ext = filename.rsplit('.', 1)[1].lower()
+            if file_ext == 'csv':
+                df = pd.read_csv(filepath)
+            else:  # xlsx or xls
+                df = pd.read_excel(filepath)
+            
+            # Validate and clean data
+            cleaned_df, error = validate_student_data(df)
+            if error:
+                flash(f'Data validation error: {error}', 'error')
+                return render_template('upload.html', config=config)
+            
+            students_data = cleaned_df
+            
+            flash(f'✓ Successfully uploaded {len(cleaned_df)} valid candidates!', 'success')
+            session['students_count'] = len(cleaned_df)
+            session.modified = True
+            
+            return redirect(url_for('allocate_seats'))
+        
+        except Exception as e:
+            flash(f'Error processing file: {str(e)}', 'error')
+            return render_template('upload.html', config=config)
+    
+    return render_template('upload.html', config=config)
+
+@app.route('/allocate-seats')
+def allocate_seats():
+    """SEAT ALLOCATION ENGINE - Step 3"""
+    config = session.get('exam_config', {})
+    if not config:
+        flash('Please configure exam details first!', 'error')
+        return redirect(url_for('oncampus_config'))
+    
+    # Check if students_data is empty
+    if isinstance(students_data, pd.DataFrame):
+        if students_data.empty:
+            flash('Please upload candidate data first!', 'error')
+            return redirect(url_for('candidate_upload'))
+    else:
+        flash('Please upload candidate data first!', 'error')
+        return redirect(url_for('candidate_upload'))
+    
+    global allocation_results
+    
+    # Allocate seats based on exam type
+    allocation_results, error = perform_seat_allocation(
+        config['num_classrooms'],
+        config['seats_per_classroom'],
+        students_data,
+        config.get('exam_type', 'semester')
+    )
+    
+    if error:
+        flash(f'Allocation error: {error}', 'error')
+        return redirect(url_for('candidate_upload'))
+    
+    flash(f'✓ Automatic seat allocation completed for {len(allocation_results)} students!', 'success')
+    
+    return redirect(url_for('view_seating'))
+
+@app.route('/view-seating')
+def view_seating():
+    """SEATING DISPLAY PAGE - Step 4"""
+    config = session.get('exam_config', {})
+    
+    if not allocation_results:
+        flash('No allocation data available. Please perform seat allocation first!', 'error')
+        return redirect(url_for('oncampus_config'))
+    
+    # Handle search
+    search_query = request.args.get('search', '').strip()
+    results = allocation_results
+    
+    if search_query:
+        results = [r for r in allocation_results 
+                  if str(r['register_number']).lower() == search_query.lower()]
+    
+    return render_template('seating.html', 
+                         results=results, 
+                         search_query=search_query,
+                         config=config,
+                         total_count=len(allocation_results))
+
+@app.route('/classroom-grid')
+def classroom_grid():
+    """CLASSROOM GRID VISUALIZATION - Step 5"""
+    config = session.get('exam_config', {})
+    
+    if not allocation_results:
+        flash('No allocation data available!', 'error')
+        return redirect(url_for('oncampus_config'))
+    
+    # Organize data by room
+    rooms = {}
+    for alloc in allocation_results:
+        room = alloc['room_number']
+        if room not in rooms:
+            rooms[room] = []
+        rooms[room].append(alloc)
+    
+    # Sort seats in each room
+    for room in rooms:
+        rooms[room].sort(key=lambda x: x['seat_number'])
+    
+    dept_colors = get_department_colors()
+    
+    return render_template('classroom.html', 
+                         rooms=rooms, 
+                         dept_colors=dept_colors,
+                         config=config)
+
+@app.route('/search-student-api')
+def search_student_api():
+    """API endpoint for student search"""
+    reg_num = request.args.get('reg_num', '').strip()
+    
+    for res in allocation_results:
+        if str(res['register_number']).lower() == reg_num.lower():
+            return jsonify(res)
+    
+    return jsonify({'error': 'Student not found'}), 404
+
+@app.route('/export-seating')
+def export_seating():
+    """Export seating arrangement to Excel"""
+    if not allocation_results:
+        flash('No data to export!', 'error')
+        return redirect(url_for('view_seating'))
+    
+    try:
+        df = pd.DataFrame(allocation_results)
+        filename = f"seating_arrangement_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        df.to_excel(filepath, index=False, engine='openpyxl')
+        
+        flash(f'✓ Exported to {filename}', 'success')
+        return redirect(url_for('view_seating'))
+    except Exception as e:
+        flash(f'Error exporting file: {str(e)}', 'error')
+        return redirect(url_for('view_seating'))
+
+@app.route('/student-login', methods=['GET', 'POST'])
+def student_login():
+    if request.method == 'POST':
+        reg_num = request.form.get('register_number', '').strip()
+        dob = request.form.get('dob', '').strip()
+        
+        # Simple credential check (replace with database validation in production)
+        # For now, any registration number is accepted
+        if reg_num and dob:
+            flash('Student login successful!', 'success')
+            return redirect(url_for('student_allotment'))
+        else:
+            flash('Please enter valid registration number and date of birth!', 'error')
+    
+    return render_template('student-login.html')
+
+@app.route('/dashboard')
+def dashboard():
+    return render_template('dashboard.html')
+
+@app.route('/oncampus-dashboard')
+def oncampus_dashboard():
+    stats = {
+        'total_students': len(students_data),
+        'total_classrooms': 10,  # Placeholder
+        'total_seats': 450,       # Placeholder
+        'allocated_seats': len(allocation_results)
+    }
+    return render_template('oncampus_dashboard.html', stats=stats)
+
+@app.route('/offcampus-dashboard')
+def offcampus_dashboard():
+    stats = {
+        'total_students': len(students_data),
+        'total_venues': 5,         # Placeholder
+        'total_seats': 300,        # Placeholder
+        'allocated_seats': len(allocation_results)
+    }
+    return render_template('offcampus_dashboard.html', stats=stats)
+
+@app.route('/upload-students', methods=['POST'])
+def upload_students():
+    global students_data
+    if 'file' not in request.files:
+        flash('No file part', 'error')
+        return redirect(url_for('oncampus_dashboard'))
+    
+    file = request.files['file']
+    if file.filename == '':
+        flash('No selected file', 'error')
+        return redirect(url_for('oncampus_dashboard'))
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        try:
+            # Get file extension
+            file_ext = filename.rsplit('.', 1)[1].lower()
+            
+            if file_ext == 'csv':
+                df = pd.read_csv(filepath)
+            elif file_ext in ['xlsx', 'xls']:
+                # pandas will auto-detect the best engine with openpyxl available
+                df = pd.read_excel(filepath)
+            else:
+                flash(f'Unsupported file format: {file_ext}', 'error')
+                return redirect(url_for('oncampus_dashboard'))
+            
+            # Required columns: Register Number, Student Name, Department
+            required_columns = ['Register Number', 'Student Name', 'Department']
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            
+            if missing_columns:
+                flash(f"Missing required columns: {', '.join(missing_columns)}. Your file has: {', '.join(df.columns.tolist())}", 'error')
+                return redirect(url_for('oncampus_dashboard'))
+            
+            students_data = df.to_dict('records')
+            flash(f'✓ Successfully uploaded {len(students_data)} students.', 'success')
+        except Exception as e:
+            flash(f'Error processing file: {str(e)}', 'error')
+            
+        return redirect(url_for('oncampus_dashboard'))
+    
+    flash('Invalid file type. Please upload CSV or Excel (.xlsx, .xls)', 'error')
+    return redirect(url_for('oncampus_dashboard'))
+
+@app.route('/generate-seating')
+def generate_seating():
+    global students_data, allocation_results
+    if not students_data:
+        flash('No student data available to allocate.', 'error')
+        return redirect(url_for('oncampus_dashboard'))
+    
+    allocation_results = []
+    classrooms = ['Hall A', 'Hall B', 'Hall C', 'Hall D']
+    benches_per_classroom = 25
+    seats_per_bench = 2
+    
+    # Group students by department
+    departments = {}
+    for student in students_data:
+        dept = student.get('Department', 'Unknown')
+        if dept not in departments:
+            departments[dept] = []
+        departments[dept].append(student)
+    
+    # Get list of departments
+    dept_list = list(departments.keys())
+    
+    if len(dept_list) < 2:
+        flash('Need at least 2 departments for seating arrangement.', 'error')
+        return redirect(url_for('oncampus_dashboard'))
+    
+    classroom_index = 0
+    bench_index = 1
+    
+    # Pair departments and allocate to classrooms
+    dept_pairs = []
+    for i in range(0, len(dept_list), 2):
+        if i + 1 < len(dept_list):
+            dept_pairs.append((dept_list[i], dept_list[i + 1]))
+        else:
+            # If odd number of departments, pair last with first
+            dept_pairs.append((dept_list[i], dept_list[0]))
+    
+    # Allocate seating for each department pair
+    for dept1, dept2 in dept_pairs:
+        if classroom_index >= len(classrooms):
+            break
+        
+        students_dept1 = departments[dept1][:]
+        students_dept2 = departments[dept2][:]
+        
+        # Allocate benches (25 benches per classroom)
+        for bench_num in range(benches_per_classroom):
+            if classroom_index >= len(classrooms):
+                break
+            
+            current_classroom = classrooms[classroom_index]
+            
+            # Try to get one student from each department
+            student1 = None
+            student2 = None
+            
+            if students_dept1:
+                student1 = students_dept1.pop(0)
+            if students_dept2:
+                student2 = students_dept2.pop(0)
+            
+            # If one department runs out, move to next classroom
+            if not student1 or not student2:
+                classroom_index += 1
+                if classroom_index >= len(classrooms):
+                    break
+                current_classroom = classrooms[classroom_index]
+                
+                # Allocate remaining students to new classroom
+                if student1:
+                    allocation_results.append({
+                        'register_number': student1.get('Register Number'),
+                        'student_name': student1.get('Student Name'),
+                        'department': student1.get('Department'),
+                        'classroom': current_classroom,
+                        'bench_number': f"B-{bench_num + 1}",
+                        'seat_number': 'S-1'
+                    })
+                if student2:
+                    allocation_results.append({
+                        'register_number': student2.get('Register Number'),
+                        'student_name': student2.get('Student Name'),
+                        'department': student2.get('Department'),
+                        'classroom': current_classroom,
+                        'bench_number': f"B-{bench_num + 1}",
+                        'seat_number': 'S-2'
+                    })
+                continue
+            
+            # Allocate both students to same bench (different departments)
+            # Seat 1 - Student from Dept 1
+            allocation_results.append({
+                'register_number': student1.get('Register Number'),
+                'student_name': student1.get('Student Name'),
+                'department': student1.get('Department'),
+                'classroom': current_classroom,
+                'bench_number': f"B-{bench_num + 1}",
+                'seat_number': 'S-1'
+            })
+            
+            # Seat 2 - Student from Dept 2
+            allocation_results.append({
+                'register_number': student2.get('Register Number'),
+                'student_name': student2.get('Student Name'),
+                'department': student2.get('Department'),
+                'classroom': current_classroom,
+                'bench_number': f"B-{bench_num + 1}",
+                'seat_number': 'S-2'
+            })
+        
+        classroom_index += 1
+    
+    if allocation_results:
+        flash(f'✓ Successfully generated smart seating for {len(allocation_results)} students! ({len(dept_pairs)} department pairs)', 'success')
+    else:
+        flash('Could not generate seating arrangement.', 'error')
+    
+    return redirect(url_for('view_results'))
+
+@app.route('/view-results')
+def view_results():
+    search_query = request.args.get('search', '').strip()
+    results = allocation_results
+    
+    if search_query:
+        results = [r for r in allocation_results if str(r['register_number']) == search_query]
+        
+    return render_template('view_results.html', results=results, search_query=search_query)
+
+@app.route('/search-student')
+def search_student():
+    reg_num = request.args.get('reg_num', '').strip()
+    for res in allocation_results:
+        if str(res['register_number']) == reg_num:
+            return jsonify(res)
+    return jsonify({'error': 'Student not found'}), 404
+
+@app.route('/student-allotment')
+def student_allotment():
+    return render_template('student-allotment.html')
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)

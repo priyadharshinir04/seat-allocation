@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classroom Seating Layout - College Seating System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Department Colors */
+            --dept-cse: #3498db;
+            --dept-it: #2ecc71;
+            --dept-ece: #e67e22;
+            --dept-mech: #9b59b6;
+            --dept-civil: #1abc9c;
+            --dept-eee: #f39c12;
+            --dept-aids: #c0392b;
+            --dept-aiml: #8e44ad;
+            
+            /* General Colors */
+            --primary: #2ebed9;
+            --primary-dark: #25a3c4;
+            --primary-gradient: linear-gradient(135deg, #2ebed9 0%, #2a9fd4 100%);
+            --gray-50: #fafbfc;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --white: #ffffff;
+            
+            --border-radius: 8px;
+            --border-radius-lg: 12px;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.12);
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            padding: 20px;
+            color: var(--gray-900);
+        }
+
+        /* ============= PAGE HEADER ============= */
+        .page-header {
+            background: var(--white);
+            padding: 24px 32px;
+            border-radius: var(--border-radius-lg);
+            margin-bottom: 32px;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--gray-900);
+            margin: 0;
+        }
+
+        .header-title p {
+            font-size: 0.9rem;
+            color: var(--gray-600);
+            margin: 4px 0 0;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-header {
+            padding: 10px 20px;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-secondary {
+            background: var(--gray-100);
+            color: var(--gray-700);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-200);
+        }
+
+        /* ============= VIEW TOGGLE ============= */
+        .view-toggle-section {
+            background: var(--white);
+            padding: 16px 32px;
+            border-radius: var(--border-radius-lg);
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .view-toggle-section label {
+            color: var(--gray-600);
+            font-weight: 600;
+            margin-right: 12px;
+        }
+
+        .btn-view-toggle {
+            padding: 8px 16px;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+        }
+
+        .btn-view-toggle.active {
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .btn-view-toggle:not(.active) {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+
+        .btn-view-toggle:hover:not(.active) {
+            background: var(--gray-300);
+        }
+
+        /* ============= SEARCH SECTION ============= */
+        .search-section {
+            background: var(--white);
+            padding: 20px;
+            border-radius: var(--border-radius-lg);
+            margin-bottom: 30px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .search-box {
+            display: flex;
+            gap: 12px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1.5px solid var(--gray-300);
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+        }
+
+        .search-box button {
+            padding: 10px 24px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .search-box button:hover {
+            background: var(--primary-dark);
+        }
+
+        /* ============= GLOBAL COLOR LEGEND ============= */
+        .global-legend {
+            background: var(--white);
+            padding: 24px 32px;
+            border-radius: var(--border-radius-lg);
+            margin-bottom: 30px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .legend-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: var(--gray-50);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 550;
+            border-left: 4px solid transparent;
+        }
+
+        .legend-color {
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+        }
+
+        .legend-item.cse { border-left-color: var(--dept-cse); }
+        .legend-item.it { border-left-color: var(--dept-it); }
+        .legend-item.ece { border-left-color: var(--dept-ece); }
+        .legend-item.mech { border-left-color: var(--dept-mech); }
+        .legend-item.civil { border-left-color: var(--dept-civil); }
+        .legend-item.eee { border-left-color: var(--dept-eee); }
+        .legend-item.aids { border-left-color: var(--dept-aids); }
+        .legend-item.aiml { border-left-color: var(--dept-aiml); }
+
+        /* ============= CLASSROOMS GRID ============= */
+        .classrooms-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        .classroom-container {
+            background: var(--white);
+            border-radius: var(--border-radius-lg);
+            padding: 0;
+            box-shadow: var(--shadow-lg);
+            page-break-inside: avoid;
+            overflow: hidden;
+            border: 2px solid var(--gray-200);
+        }
+
+        /* ============= ROOM HEADER ============= */
+        .room-header {
+            background: linear-gradient(135deg, #2ebed9 0%, #25a3c4 100%);
+            color: white;
+            padding: 28px 32px;
+            border-bottom: 4px solid var(--primary-dark);
+        }
+
+        .room-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin: 0 0 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* ============= ROOM STATISTICS ============= */
+        .room-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 14px 16px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .stat-icon {
+            font-size: 1.4rem;
+            opacity: 0.9;
+            flex-shrink: 0;
+        }
+
+        .stat-content h4 {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            margin: 0 0 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        /* ============= BADGE SECTIONS ============= */
+        .badge-sections {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .badge-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .badge-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            opacity: 0.8;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+        }
+
+        .badge i {
+            font-size: 0.75rem;
+        }
+
+        /* ============= CLASSROOM LAYOUT ============= */
+        .classroom-layout-wrapper {
+            padding: 40px;
+            background: var(--gray-50);
+        }
+
+        .classroom-layout {
+            background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+            border: 4px solid var(--gray-800);
+            border-radius: 12px;
+            padding: 40px;
+            position: relative;
+            min-height: 800px;
+        }
+
+        /* ============= BOARD AREA ============= */
+        .classroom-board {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2c3e50 100%);
+            color: #f0f0f0;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 50px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            border: 3px solid #000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        /* ============= BENCH SECTIONS ============= */
+        .bench-sections {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .bench-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .bench-section-label {
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--gray-600);
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            opacity: 0.7;
+            text-transform: uppercase;
+        }
+
+        /* ============= BENCH STYLING ============= */
+        .bench {
+            background: white;
+            border: 3px solid var(--gray-400);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+            transition: var(--transition);
+        }
+
+        .bench:hover {
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+            transform: scale(1.02);
+        }
+
+        .bench-label {
+            background: var(--gray-200);
+            padding: 8px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--gray-800);
+            border-bottom: 2px solid var(--gray-400);
+        }
+
+        /* ============= BENCH SEATS ============= */
+        .bench-rows {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+            border-collapse: collapse;
+        }
+
+        .benchmark-seat {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 12px 10px;
+            font-size: 0.75rem;
+            min-height: 100px;
+            text-align: center;
+            border-right: 2px solid var(--gray-300);
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .benchmark-seat:last-child {
+            border-right: none;
+        }
+
+        .benchmark-seat.occupied {
+            color: white;
+            font-weight: 600;
+        }
+
+        .benchmark-seat.empty {
+            background: #e8e8e8;
+            color: #999;
+        }
+
+        .benchmark-seat:hover.occupied {
+            filter: brightness(1.15);
+            box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .seat-info {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .seat-number {
+            font-weight: 700;
+            font-size: 0.8rem;
+            opacity: 0.95;
+        }
+
+        .register-number {
+            font-weight: 600;
+            font-size: 0.75rem;
+            word-break: break-all;
+            opacity: 0.9;
+            line-height: 1.2;
+        }
+
+        .department-code {
+            font-size: 0.7rem;
+            font-weight: 700;
+            opacity: 0.85;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .year {
+            font-size: 0.7rem;
+            opacity: 0.8;
+            font-style: italic;
+        }
+
+        /* ============= DEPARTMENT COLOR CLASSES ============= */
+        .dept-cse { background: var(--dept-cse) !important; }
+        .dept-it { background: var(--dept-it) !important; }
+        .dept-ece { background: var(--dept-ece) !important; }
+        .dept-mech { background: var(--dept-mech) !important; }
+        .dept-civil { background: var(--dept-civil) !important; }
+        .dept-eee { background: var(--dept-eee) !important; }
+        .dept-aids { background: var(--dept-aids) !important; }
+        .dept-aiml { background: var(--dept-aiml) !important; }
+
+        /* ============= HIGHLIGHTED SEAT ============= */
+        .benchmark-seat.highlighted {
+            animation: pulse-highlight 0.6s ease-in-out;
+            box-shadow: inset 0 0 0 3px rgba(46, 191, 145, 0.5) !important;
+        }
+
+        @keyframes pulse-highlight {
+            0%, 100% { box-shadow: inset 0 0 0 0 rgba(46, 191, 145, 0.7); }
+            50% { box-shadow: inset 0 0 0 8px rgba(46, 191, 145, 0.2); }
+        }
+
+        /* ============= FOOTER ACTIONS ============= */
+        .footer-actions {
+            margin-top: 40px;
+            text-align: center;
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            padding: 0 20px;
+        }
+
+        .btn-action {
+            padding: 12px 24px;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(46, 191, 145, 0.3);
+        }
+
+        .btn-secondary-action {
+            background: var(--gray-200);
+            color: var(--gray-900);
+        }
+
+        .btn-secondary-action:hover {
+            background: var(--gray-300);
+        }
+
+        /* ============= PRINT STYLES ============= */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .page-header,
+            .footer-actions,
+            .search-section,
+            .global-legend,
+            .view-toggle-section {
+                display: none;
+            }
+            .classroom-container {
+                page-break-after: always;
+                box-shadow: none;
+                break-inside: avoid;
+                border: 1px solid #ccc;
+            }
+            .classroom-layout {
+                border: 2px solid black;
+                page-break-inside: avoid;
+            }
+        }
+
+        /* ============= RESPONSIVE DESIGN ============= */
+        @media (max-width: 1200px) {
+            .bench-sections {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+            .classroom-layout {
+                padding: 30px;
+            }
+            .room-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .bench-sections {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .bench-section {
+                gap: 8px;
+            }
+
+            .classroom-layout {
+                padding: 20px;
+                min-height: auto;
+            }
+
+            .classroom-board {
+                padding: 15px;
+                font-size: 0.95rem;
+                margin-bottom: 30px;
+            }
+
+            .benchmark-seat {
+                padding: 10px 8px;
+                font-size: 0.7rem;
+                min-height: 90px;
+            }
+
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+
+            .legend-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .room-header {
+                padding: 20px 24px;
+            }
+
+            .room-title {
+                font-size: 1.4rem;
+                margin-bottom: 12px;
+            }
+
+            .room-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-card {
+                padding: 12px 14px;
+            }
+
+            .classroom-layout-wrapper {
+                padding: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .bench-section-label {
+                font-size: 0.75rem;
+            }
+
+            .bench-label {
+                font-size: 0.75rem;
+            }
+
+            .benchmark-seat {
+                padding: 8px 6px;
+                font-size: 0.65rem;
+                min-height: 80px;
+            }
+
+            .seat-number {
+                font-size: 0.7rem;
+            }
+
+            .register-number {
+                font-size: 0.65rem;
+            }
+
+            .department-code {
+                font-size: 0.65rem;
+            }
+
+            .year {
+                font-size: 0.65rem;
+            }
+
+            .header-title h1 {
+                font-size: 1.4rem;
+            }
+
+            .classroom-layout {
+                padding: 15px;
+            }
+
+            .room-title {
+                font-size: 1.2rem;
+            }
+
+            .legend-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .legend-item {
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="header-title">
+            <h1><i class="fas fa-chair"></i> Classroom Seating Layout</h1>
+            <p>Professional exam hall visualization with room-wise seat allocation</p>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('view_results') }}" class="btn-header btn-secondary" title="View table format">
+                <i class="fas fa-table"></i> Table View
+            </a>
+            <button onclick="window.print()" class="btn-header btn-secondary" title="Print all rooms">
+                <i class="fas fa-print"></i> Print
+            </button>
+            <a href="{{ url_for('oncampus_dashboard') }}" class="btn-header btn-secondary" title="Back to dashboard">
+                <i class="fas fa-arrow-left"></i> Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- View Toggle -->
+    <div class="view-toggle-section">
+        <label>View Options:</label>
+        <a href="{{ url_for('classroom_visualization') }}" class="btn-view-toggle active">
+            <i class="fas fa-chair"></i> Classroom Layout
+        </a>
+        <a href="{{ url_for('view_results') }}" class="btn-view-toggle">
+            <i class="fas fa-table"></i> Table View
+        </a>
+    </div>
+
+    <!-- Search Section -->
+    <div class="search-section">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search by Register Number or Name..." class="search-input">
+            <button onclick="searchStudent()"><i class="fas fa-search"></i> Search</button>
+        </div>
+    </div>
+
+    <!-- Global Department Color Legend -->
+    <div class="global-legend">
+        <div class="legend-title">
+            <i class="fas fa-palette"></i> Department Color Legend
+        </div>
+        <div class="legend-grid">
+            <div class="legend-item cse">
+                <div class="legend-color" style="background: var(--dept-cse);"></div>
+                <span>CSE</span>
+            </div>
+            <div class="legend-item it">
+                <div class="legend-color" style="background: var(--dept-it);"></div>
+                <span>IT</span>
+            </div>
+            <div class="legend-item ece">
+                <div class="legend-color" style="background: var(--dept-ece);"></div>
+                <span>ECE</span>
+            </div>
+            <div class="legend-item mech">
+                <div class="legend-color" style="background: var(--dept-mech);"></div>
+                <span>MECH</span>
+            </div>
+            <div class="legend-item civil">
+                <div class="legend-color" style="background: var(--dept-civil);"></div>
+                <span>CIVIL</span>
+            </div>
+            <div class="legend-item eee">
+                <div class="legend-color" style="background: var(--dept-eee);"></div>
+                <span>EEE</span>
+            </div>
+            <div class="legend-item aids">
+                <div class="legend-color" style="background: var(--dept-aids);"></div>
+                <span>AIDS</span>
+            </div>
+            <div class="legend-item aiml">
+                <div class="legend-color" style="background: var(--dept-aiml);"></div>
+                <span>AIML</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Classrooms Grid -->
+    <div class="classrooms-grid">
+        {% set classrooms_dict = {} %}
+        
+        {# Group students by classroom #}
+        {% for result in results %}
+            {% set classroom = result.get('classroom', result.get('room_number', 'Room A')) %}
+            {% if classroom not in classrooms_dict %}
+                {% set _ = classrooms_dict.update({classroom: []}) %}
+            {% endif %}
+            {% set _ = classrooms_dict[classroom].append(result) %}
+        {% endfor %}
+
+        {# Render each classroom #}
+        {% for classroom, students in classrooms_dict.items() | sort %}
+        <div class="classroom-container" data-classroom="{{ classroom }}">
+            <!-- Room Header with Statistics and Badges -->
+            <div class="room-header">
+                <div class="room-title">
+                    <i class="fas fa-door-open"></i> {{ classroom }}
+                </div>
+
+                <!-- Room Statistics -->
+                <div class="room-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-users"></i></div>
+                        <div class="stat-content">
+                            <h4>Total Students</h4>
+                            <p class="stat-value">{{ students|length }}</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-chair"></i></div>
+                        <div class="stat-content">
+                            <h4>Empty Seats</h4>
+                            <p class="stat-value">{{ (20 * 2) - students|length }}</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-building"></i></div>
+                        <div class="stat-content">
+                            <h4>Total Capacity</h4>
+                            <p class="stat-value">{{ 20 * 2 }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Department and Year Badges -->
+                <div class="badge-sections">
+                    <div class="badge-group">
+                        <span class="badge-label"><i class="fas fa-tag"></i> Departments:</span>
+                        {% set depts = [] %}
+                        {% for student in students %}
+                            {% if student.get('department') not in depts %}
+                                {% set _ = depts.append(student.get('department')) %}
+                            {% endif %}
+                        {% endfor %}
+                        {% for dept in depts | sort %}
+                            <div class="badge">
+                                <i class="fas fa-circle" style="font-size: 6px;"></i>
+                                {{ dept }}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="badge-group">
+                        <span class="badge-label"><i class="fas fa-graduation-cap"></i> Years:</span>
+                        {% set years = [] %}
+                        {% for student in students %}
+                            {% if student.get('year') and student.get('year') not in years %}
+                                {% set _ = years.append(student.get('year')) %}
+                            {% endif %}
+                        {% endfor %}
+                        {% for year in years | sort %}
+                            <div class="badge">
+                                <i class="fas fa-book"></i>
+                                Year {{ year }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Class Layout -->
+            <div class="classroom-layout-wrapper">
+                <div class="classroom-layout">
+                    <!-- Board/Examiner Area -->
+                    <div class="classroom-board">
+                        <i class="fas fa-chalkboard"></i> BOARD / EXAMINER AREA
+                    </div>
+
+                    <!-- Benches Arranged in Sections -->
+                    <div class="bench-sections">
+                        <!-- LEFT SECTION: Benches 1-5 -->
+                        <div class="bench-section">
+                            <div class="bench-section-label">LEFT</div>
+                            {% for bench_num in range(1, 6) %}
+                                {% set bench_students = students | selectattr('bench_number', 'equalto', bench_num) | list %}
+                                {% set bench_students_int = [] %}
+                                {% for s in students %}
+                                    {% if s.get('bench_number') == bench_num or (s.get('bench_number') | string == bench_num | string) %}
+                                        {% set _ = bench_students_int.append(s) %}
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                <div class="bench">
+                                    <div class="bench-label">Bench {{ bench_num }}</div>
+                                    <div class="bench-rows">
+                                        <!-- Seat 1 (Left) -->
+                                        {% if bench_students_int | length >= 1 %}
+                                            {% set student1 = bench_students[0] %}
+                                            {% set dept_class = 'dept-' + (student1.get('department', 'AIDS')[:3].lower().replace(' ', '')) %}
+                                            <div class="benchmark-seat occupied {{ dept_class }}">
+                                                <div class="seat-info">
+                                                    <div class="seat-number">Seat 1</div>
+                                                    <div class="register-number">{{ student1.get('register_number', 'N/A') }}</div>
+                                                    <div class="department-code">{{ student1.get('department', 'AIDS')[:3] }}</div>
+                                                    <div class="year">Year {{ student1.get('year', '1') }}</div>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <div class="benchmark-seat empty">
+                                                <div><i class="fas fa-chair" style="font-size: 1.2rem; opacity: 0.5;"></i></div>
+                                                <div style="font-size: 0.65rem; margin-top: 4px;">EMPTY</div>
+                                            </div>
+                                        {% endif %}
+
+                                        <!-- Seat 2 (Right) -->
+                                        {% if bench_students_int | length >= 2 %}
+                                            {% set student2 = bench_students_int[1] %}
+                                            {% set dept_class = 'dept-' + (student2.get('department', 'AIDS')[:3].lower().replace(' ', '')) %}
+                                            <div class="benchmark-seat occupied {{ dept_class }}">
+                                                <div class="seat-info">
+                                                    <div class="seat-number">Seat 2</div>
+                                                    <div class="register-number">{{ student2.get('register_number', 'N/A') }}</div>
+                                                    <div class="department-code">{{ student2.get('department', 'AIDS')[:3] }}</div>
+                                                    <div class="year">Year {{ student2.get('year', '1') }}</div>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <div class="benchmark-seat empty">
+                                                <div><i class="fas fa-chair" style="font-size: 1.2rem; opacity: 0.5;"></i></div>
+                                                <div style="font-size: 0.65rem; margin-top: 4px;">EMPTY</div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- MIDDLE-LEFT SECTION: Benches 6-10 -->
+                        <div class="bench-section">
+                            <div class="bench-section-label">MIDDLE-LEFT</div>
+                            {% for bench_num in range(6, 11) %}
+                                {% set bench_students = [] %}
+                                {% for student in students %}
+                                    {% if (student.get('bench_number', 0) | int) == bench_num %}
+                                        {% set _ = bench_students.append(student) %}
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                <div class="bench">
+                                    <div class="bench-label">Bench {{ bench_num }}</div>
+                                    <div class="bench-rows">
+                                        {% if bench_students | length >= 1 %}
+                                            {% set student1 = bench_students[0] %}
+                                            {% set dept_class = 'dept-' + (student1.get('department', 'AIDS')[:3].lower().replace(' ', '')) %}
+                                            <div class="benchmark-seat occupied {{ dept_class }}">
+                                                <div class="seat-info">
+                                                    <div class="seat-number">Seat 1</div>
+                                                    <div class="register-number">{{ student1.get('register_number', 'N/A') }}</div>
+                                                    <div class="department-code">{{ student1.get('department', 'AIDS')[:3] }}</div>
+                                                    <div class="year">Year {{ student1.get('year', '1') }}</div>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <div class="benchmark-seat empty">
+                                                <div><i class="fas fa-chair" style="font-size: 1.2rem; opacity: 0.5;"></i></div>
+                                                <div style="font-size: 0.65rem; margin-top: 4px;">EMPTY</div>
+                                            </div>
+                                        {% endif %}
+
+                                        {% if bench_students | length >= 2 %}
+                                            {% set student2 = bench_students[1] %}
+                                            {% set dept_class = 'dept-' + (student2.get('department', 'AIDS')[:3].lower().replace(' ', '')) %}
+                                            <div class="benchmark-seat occupied {{ dept_class }}">
+                                                <div class="seat-info">
+                                                    <div class="seat-number">Seat 2</div>
+                                                    <div class="register-number">{{ student2.get('register_number', 'N/A') }}</div>
+                                                    <div class="department-code">{{ student2.get('department', 'AIDS')[:3] }}</div>
+                                                    <div class="year">Year {{ student2.get('year', '1') }}</div>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <div class="benchmark-seat empty">
+                                                <div><i class="fas fa-chair" style="font-size: 1.2rem; opacity: 0.5;"></i></div>
+                                                <div style="font-size: 0.65rem; margin-top: 4px;">EMPTY</div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- MIDDLE-RIGHT SECTION: Benches 11-15 -->
+                        <div class="bench-section">
+                            <div class="bench-section-label">MIDDLE-RIGHT</div>
+                            {% for bench_num in range(11, 16) %}
+                                {% set bench_students = [] %}
+                                {% for student in students %}
+                                    {% if (student.get('bench_number', 0) | int) == bench_num %}
+                                        {% set _ = bench_students.append(student) %}
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                <div class="bench">
+                                    <div class="bench-label">Bench {{ bench_num }}</div>
+                                    <div class="bench-rows">
+                                        {% if bench_students | length >= 1 %}
+                                            {% set student1 = bench_students[0] %}
+                                            {% set dept_class = 'dept-' + (student1.get('department', 'AIDS')[:3].lower().replace(' ', '')) %}
+                                            <div class="benchmark-seat occupied {{ dept_class }}">
+                                                <div class="seat-info">
+                                                    <div class="seat-number">Seat 1</div>
+                                                    <div class="register-number">{{ student1.get('register_number', 'N/A') }}</div>
+                                                    <div class="department-code">{{ student1.get('department', 'AIDS')[:3] }}</div>
+                                                    <div class="year">Year {{ student1.get('year', '1') }}</div>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <div class="benchmark-seat empty">
+                                                <div><i class="fas fa-chair" style="font-size: 1.2rem; opacity: 0.5;"></i></div>
+                                                <div style="font-size: 0.65rem; margin-top: 4px;">EMPTY</div>
+                                            </div>
+                                        {% endif %}
+
+                                        {% if bench_students | length >= 2 %}
+                                            {% set student2 = bench_students[1] %}
+                                            {% set dept_class = 'dept-' + (student2.get('department', 'AIDS')[:3].lower().replace(' ', '')) %}
+                                            <div class="benchmark-seat occupied {{ dept_class }}">
+                                                <div class="seat-info">
+                                                    <div class="seat-number">Seat 2</div>
+                                                    <div class="register-number">{{ student2.get('register_number', 'N/A') }}</div>
+                                                    <div class="department-code">{{ student2.get('department', 'AIDS')[:3] }}</div>
+                                                    <div class="year">Year {{ student2.get('year', '1') }}</div>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <div class="benchmark-seat empty">
+                                                <div><i class="fas fa-chair" style="font-size: 1.2rem; opacity: 0.5;"></i></div>
+                                                <div style="font-size: 0.65rem; margin-top: 4px;">EMPTY</div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- RIGHT SECTION: Benches 16-20 -->
+                        <div class="bench-section">
+                            <div class="bench-section-label">RIGHT</div>
+                            {% for bench_num in range(16, 21) %}
+                                {% set bench_students = [] %}
+                                {% for student in students %}
+                                    {% if (student.get('bench_number', 0) | int) == bench_num %}
+                                        {% set _ = bench_students.append(student) %}
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                <div class="bench">
+                                    <div class="bench-label">Bench {{ bench_num }}</div>
+                                    <div class="bench-rows">
+                                        {% if bench_students | length >= 1 %}
+                                            {% set student1 = bench_students[0] %}
+                                            {% set dept_class = 'dept-' + (student1.get('department', 'AIDS')[:3].lower().replace(' ', '')) %}
+                                            <div class="benchmark-seat occupied {{ dept_class }}">
+                                                <div class="seat-info">
+                                                    <div class="seat-number">Seat 1</div>
+                                                    <div class="register-number">{{ student1.get('register_number', 'N/A') }}</div>
+                                                    <div class="department-code">{{ student1.get('department', 'AIDS')[:3] }}</div>
+                                                    <div class="year">Year {{ student1.get('year', '1') }}</div>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <div class="benchmark-seat empty">
+                                                <div><i class="fas fa-chair" style="font-size: 1.2rem; opacity: 0.5;"></i></div>
+                                                <div style="font-size: 0.65rem; margin-top: 4px;">EMPTY</div>
+                                            </div>
+                                        {% endif %}
+
+                                        {% if bench_students | length >= 2 %}
+                                            {% set student2 = bench_students[1] %}
+                                            {% set dept_class = 'dept-' + (student2.get('department', 'AIDS')[:3].lower().replace(' ', '')) %}
+                                            <div class="benchmark-seat occupied {{ dept_class }}">
+                                                <div class="seat-info">
+                                                    <div class="seat-number">Seat 2</div>
+                                                    <div class="register-number">{{ student2.get('register_number', 'N/A') }}</div>
+                                                    <div class="department-code">{{ student2.get('department', 'AIDS')[:3] }}</div>
+                                                    <div class="year">Year {{ student2.get('year', '1') }}</div>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <div class="benchmark-seat empty">
+                                                <div><i class="fas fa-chair" style="font-size: 1.2rem; opacity: 0.5;"></i></div>
+                                                <div style="font-size: 0.65rem; margin-top: 4px;">EMPTY</div>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Footer Actions -->
+    <div class="footer-actions">
+        <button onclick="window.print()" class="btn-action btn-secondary-action">
+            <i class="fas fa-print"></i> Print All Rooms
+        </button>
+        <a href="{{ url_for('view_results') }}" class="btn-action btn-secondary-action">
+            <i class="fas fa-table"></i> Switch to Table View
+        </a>
+        <a href="{{ url_for('oncampus_dashboard') }}" class="btn-action btn-secondary-action">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <script>
+        function searchStudent() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+            const seats = document.querySelectorAll('.benchmark-seat.occupied');
+            
+            // Remove previous highlights
+            seats.forEach(seat => seat.classList.remove('highlighted'));
+
+            if (searchTerm === '') return;
+
+            // Find and highlight matching seat
+            let found = false;
+            seats.forEach(seat => {
+                const register = seat.querySelector('.register-number')?.textContent?.toLowerCase() || '';
+                const allText = seat.textContent.toLowerCase();
+                
+                if (register.includes(searchTerm) || allText.includes(searchTerm)) {
+                    seat.classList.add('highlighted');
+                    seat.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    found = true;
+                }
+            });
+
+            if (!found) {
+                alert('Student not found!');
+            }
+        }
+
+        // Allow Enter key to search
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') searchStudent();
+            });
+        }
+
+        // Hover effects for seat details
+        document.querySelectorAll('.benchmark-seat.occupied').forEach(seat => {
+            seat.addEventListener('mouseenter', function() {
+                const register = this.querySelector('.register-number')?.textContent || '';
+                const dept = this.querySelector('.department-code')?.textContent || '';
+                this.title = `${register} - ${dept}`;
+            });
+        });
+    </script>
+</body>
+</html>

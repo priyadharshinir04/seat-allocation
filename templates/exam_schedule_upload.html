@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Schedule Upload - Seat Allocation System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 30px 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .upload-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            margin-bottom: 30px;
+        }
+        
+        .header-section {
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .header-title {
+            color: #667eea;
+            font-weight: bold;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header-subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .step-indicator {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            line-height: 40px;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9fc;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 20px 0;
+        }
+        
+        .upload-area:hover {
+            background: #eeefff;
+            border-color: #764ba2;
+        }
+        
+        .upload-area i {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .form-control {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px 15px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .btn-primary-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+        
+        .info-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 14px;
+            color: #555;
+        }
+        
+        .info-box strong {
+            color: #667eea;
+        }
+        
+        .template-link {
+            display: inline-block;
+            background: #2ebf91;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+        
+        .template-link:hover {
+            background: #27a678;
+            color: white;
+        }
+        
+        .alert {
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .btn-back {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .btn-back:hover {
+            color: #764ba2;
+        }
+        
+        .skip-link {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .skip-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .skip-link a:hover {
+            color: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="upload-container">
+            <a href="{{ url_for('oncampus_config') }}" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+            
+            <div class="header-section">
+                <h1 class="header-title">
+                    <span class="step-indicator">2B</span>
+                    <i class="fas fa-book"></i> Exam Schedule Upload
+                </h1>
+                <p class="header-subtitle">Upload subject details for automatic student assignment</p>
+            </div>
+            
+            <!-- Flash messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <!-- Info boxes -->
+            <div class="info-box">
+                <i class="fas fa-info-circle"></i>
+                <strong>What is this?</strong> Upload a master exam schedule file containing subject details. 
+                This will automatically show the correct subject to each student based on their year and department.
+            </div>
+            
+            <div class="info-box">
+                <strong>Expected Columns:</strong>
+                <ul class="mb-0 mt-2" style="font-size: 13px;">
+                    <li><strong>Year</strong> - Student year (1, 2, 3, 4)</li>
+                    <li><strong>Department</strong> - Department code or "ALL" for common subjects (optional, defaults to ALL)</li>
+                    <li><strong>Subject Code</strong> - Course number</li>
+                    <li><strong>Subject Name</strong> - Course name</li>
+                    <li><strong>Exam Date</strong> - Exam date (YYYY-MM-DD)</li>
+                    <li><strong>Exam Time</strong> - Exam time (HH:MM)</li>
+                </ul>
+            </div>
+            
+            <!-- Upload form -->
+            <form method="POST" enctype="multipart/form-data">
+                <div class="upload-area" onclick="document.getElementById('schedule_file').click();">
+                    <input type="file" id="schedule_file" name="file" class="form-control" style="display: none;" 
+                           accept=".csv,.xlsx,.xls" required onchange="updateFileName(this)">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p style="margin: 0; font-weight: 600;">Click to select or drag file here</p>
+                    <small style="color: #999;">Supported: CSV, Excel (.xlsx, .xls)</small>
+                    <p id="file-name" style="margin-top: 10px; color: #667eea; font-weight: 600; display: none;"></p>
+                </div>
+                
+                <div style="text-align: center;">
+                    <button type="submit" class="btn-primary-custom">
+                        <i class="fas fa-upload"></i> Upload Schedule
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Sample data -->
+            <div class="info-box">
+                <strong>Sample Format (CSV):</strong>
+                <pre style="font-size: 12px; background: white; padding: 10px; border-radius: 6px; margin-top: 10px; overflow-x: auto;">
+Year,Department,Subject Code,Subject Name,Exam Date,Exam Time
+1,ALL,CS101,Programming Fundamentals,2024-03-20,09:00
+1,ALL,CS102,Data Structures,2024-03-21,02:00
+2,AIDS,CS201,AI Basics,2024-03-22,09:00
+2,CSE,CS202,Web Development,2024-03-22,02:00
+                </pre>
+            </div>
+            
+            <!-- Skip section -->
+            <div class="skip-link">
+                <p style="margin-bottom: 10px; color: #666; font-size: 14px;">Want to skip this step for now?</p>
+                <a href="{{ url_for('candidate_upload') }}">
+                    <i class="fas fa-forward"></i> Continue without schedule
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function updateFileName(input) {
+            const fileName = input.files[0]?.name;
+            const fileNameElement = document.getElementById('file-name');
+            if (fileName) {
+                fileNameElement.textContent = '✓ File selected: ' + fileName;
+                fileNameElement.style.display = 'block';
+            }
+        }
+        
+        // Drag and drop
+        const uploadArea = document.querySelector('.upload-area');
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = '#eeefff';
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.background = '#f8f9fc';
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('schedule_file').files = files;
+                updateFileName(document.getElementById('schedule_file'));
+            }
+        });
+    </script>
+</body>
+</html>

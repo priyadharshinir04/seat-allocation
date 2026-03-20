@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seating Results - College Seating</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fc; padding: 40px; }
+        .table-card { border-radius: 15px; border: none; box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15); }
+        .bg-primary-custom { background-color: #2ebf91 !important; color: white; }
+        .view-toggle { display: flex; gap: 8px; margin-bottom: 20px; }
+        .view-toggle .btn { border-radius: 8px; font-weight: 600; }
+        .btn-primary-toggle {
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            padding: 6px 16px;
+        }
+        .btn-primary-toggle.active {
+            background-color: #2ebf91;
+            color: white;
+            border-color: #2ebf91;
+        }
+        .btn-primary-toggle:not(.active) {
+            background-color: #e9ecef;
+            color: #495057;
+            border-color: #dee2e6;
+        }
+        .btn-primary-toggle:hover:not(.active) {
+            background-color: #dee2e6;
+            color: #212529;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="text-gray-800 mb-2"><i class="fas fa-table me-2"></i>Seating Results - Table View</h2>
+                <p class="text-muted small">View detailed allocation information in table format</p>
+            </div>
+            <a href="{{ url_for('oncampus_dashboard') }}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-2"></i>Back to Dashboard</a>
+        </div>
+
+        <!-- View Toggle -->
+        <div class="view-toggle alert alert-light border-0 p-3">
+            <span class="me-3 text-muted fw-600">View Options:</span>
+            <a href="{{ url_for('view_results') }}" class="btn btn-sm btn-primary-toggle active">
+                <i class="fas fa-table me-1"></i> Table View
+            </a>
+            <a href="{{ url_for('classroom_visualization') }}" class="btn btn-sm btn-primary-toggle">
+                <i class="fas fa-chair me-1"></i> Classroom Layout
+            </a>
+        </div>
+
+        <div class="card table-card">
+            <div class="card-header bg-primary-custom py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold"><i class="fas fa-filter me-2"></i>Allocation Table</h6>
+                <form action="{{ url_for('view_results') }}" method="get" class="d-flex">
+                    <input type="text" name="search" class="form-control form-control-sm me-2" placeholder="Reg Number" value="{{ search_query }}">
+                    <button type="submit" class="btn btn-sm btn-light">Filter</button>
+                </form>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Register Number</th>
+                                <th>Candidate Name</th>
+                                <th>Department</th>
+                                <th>Year</th>
+                                <th>Room Number</th>
+                                <th>Bench/Seat</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for res in results %}
+                            <tr>
+                                <td><strong>{{ res.register_number }}</strong></td>
+                                <td>{{ res.candidate_name }}</td>
+                                <td>{{ res.department }}</td>
+                                <td><span class="badge bg-warning text-dark">Year {{ res.year }}</span></td>
+                                <td><span class="badge bg-info text-dark">Room {{ res.room_number }}</span></td>
+                                <td>
+                                    <span class="badge bg-success">
+                                        {% if res.seat_position and res.seat_position.lower() in ['left', 'right'] %}
+                                            Bench {{ res.bench_number }} ({{ res.seat_position }})
+                                        {% else %}
+                                            Bench {{ res.bench_number }}
+                                        {% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4">No allocation data found. Try uploading students and generating seating.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

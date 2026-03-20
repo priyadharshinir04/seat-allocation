@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Student Login - College Seating System">
+    <title>Student Login - College Seating</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .login-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gray-500);
+            padding: 20px;
+            position: relative;
+        }
+
+        .login-page::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(46,191,145,0.1), rgba(46,191,145,0.3));
+        }
+
+        .login-card {
+            background: var(--white);
+            border-radius: var(--border-radius-lg);
+            padding: 48px 40px 40px;
+            width: 100%;
+            max-width: 460px;
+            box-shadow: var(--shadow-xl);
+            position: relative;
+            z-index: 1;
+            animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .login-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, rgba(46,191,145,0.1), rgba(26,26,46,0.1));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 1.4rem;
+            color: var(--primary);
+        }
+
+        .login-header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 6px;
+        }
+
+        .login-header p {
+            font-size: 0.88rem;
+            color: var(--gray-500);
+        }
+
+        .login-form .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1.5px solid var(--gray-300);
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            transition: var(--transition);
+            background: var(--gray-50);
+        }
+
+        .form-group input:focus {
+            background: var(--white);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(46, 191, 145, 0.1);
+        }
+
+        .form-hint {
+            font-size: 0.8rem;
+            color: var(--gray-500);
+            margin-top: 4px;
+        }
+
+        .login-actions {
+            margin-top: 28px;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: var(--border-radius);
+            background: var(--primary);
+            color: var(--white);
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-login:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 13px;
+            margin-top: 12px;
+            border-radius: var(--border-radius);
+            border: 1.5px solid var(--gray-300);
+            background: var(--white);
+            color: var(--gray-700);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .back-btn:hover {
+            border-color: var(--gray-400);
+            background: var(--gray-50);
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .alert.alert-error {
+            background: rgba(231, 76, 60, 0.1);
+            color: #c0392b;
+            border-left: 4px solid #e74c3c;
+        }
+
+        .alert.alert-success {
+            background: rgba(46, 204, 113, 0.1);
+            color: #27ae60;
+            border-left: 4px solid #2ecc71;
+        }
+
+        .alert.alert-info {
+            background: rgba(52, 152, 219, 0.1);
+            color: #2980b9;
+            border-left: 4px solid #3498db;
+        }
+
+        .login-features {
+            margin-top: 24px;
+            padding: 16px;
+            background: var(--gray-50);
+            border-radius: var(--border-radius);
+            font-size: 0.85rem;
+            color: var(--gray-600);
+        }
+
+        .login-features h4 {
+            color: var(--gray-800);
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .login-features ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .login-features li {
+            padding: 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .login-features li::before {
+            content: '✓';
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        @media (max-width: 600px) {
+            .login-card {
+                padding: 32px 24px 24px;
+            }
+
+            .login-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .login-page {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-page">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-icon">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <h1>Student Portal</h1>
+                <p>View Your Seat Allocation</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            <i class="fas fa-{% if category == 'error' %}times-circle{% elif category == 'success' %}check-circle{% else %}info-circle{% endif %}"></i>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" class="login-form">
+                <div class="form-group">
+                    <label for="register_number">
+                        <i class="fas fa-id-card"></i> Register Number
+                    </label>
+                    <input type="text" 
+                           id="register_number" 
+                           name="register_number" 
+                           placeholder="e.g., AIDS1001" 
+                           required 
+                           autocomplete="off"
+                           pattern="[A-Za-z0-9]+"
+                           title="Register Number should contain only letters and numbers">
+                    <p class="form-hint">Enter your unique college register number</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="year_or_dob">
+                        <i class="fas fa-graduation-cap"></i> Year
+                    </label>
+                    <input type="text" 
+                           id="year_or_dob" 
+                           name="year_or_dob" 
+                           placeholder="e.g., 1, 2, 3, or 4" 
+                           required
+                           maxlength="1"
+                           pattern="[1-4]"
+                           title="Year should be 1, 2, 3, or 4">
+                    <p class="form-hint">Enter your academic year (1st, 2nd, 3rd, or 4th)</p>
+                </div>
+
+                <div class="login-actions">
+                    <button type="submit" class="btn-login">
+                        <i class="fas fa-sign-in-alt"></i> Login to Dashboard
+                    </button>
+                    <a href="{{ url_for('index') }}" class="back-btn">
+                        <i class="fas fa-arrow-left"></i> Back to Home
+                    </a>
+                </div>
+            </form>
+
+            <div class="login-features">
+                <h4><i class="fas fa-lightbulb"></i> What You Can Do:</h4>
+                <ul>
+                    <li>View your seat allocation details</li>
+                    <li>Check room and bench numbers</li>
+                    <li>Download your seating slip as PDF</li>
+                    <li>See bench mate information (for internal exams)</li>
+                    <li>Get a QR code for quick verification</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

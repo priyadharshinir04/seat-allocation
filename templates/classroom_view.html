@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classroom Seating Layout</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --dept-cse: #3498db;
+            --dept-it: #2ecc71;
+            --dept-ece: #e67e22;
+            --dept-mech: #9b59b6;
+            --dept-civil: #1abc9c;
+            --dept-eee: #f39c12;
+            --dept-aids: #c0392b;
+            --dept-aiml: #8e44ad;
+            --primary: #2ebed9;
+            --white: #ffffff;
+        }
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            padding: 20px;
+        }
+        .page-header {
+            background: var(--white);
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header-title h1 { font-size: 2rem; font-weight: 800; margin: 0; }
+        .header-actions { display: flex; gap: 12px; }
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-secondary { background: #f3f4f6; color: #374151; }
+        .btn-secondary:hover { background: #e5e7eb; }
+        .classroom-container {
+            background: var(--white);
+            border-radius: 12px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+            overflow: hidden;
+        }
+        .room-header {
+            background: linear-gradient(135deg, #2ebed9 0%, #25a3c4 100%);
+            color: var(--white);
+            padding: 28px 32px;
+        }
+        .room-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+        }
+        .room-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.15);
+            padding: 14px 16px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .stat-icon { font-size: 1.4rem; }
+        .stat-content h4 { font-size: 0.8rem; margin: 0 0 4px; font-weight: 600; opacity: 0.9; }
+        .stat-value { font-size: 1.4rem; font-weight: 700; margin: 0; }
+        .badge-group { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+        .badge-label { font-size: 0.75rem; font-weight: 700; opacity: 0.8; }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.25);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            border: 1px solid rgba(255,255,255,0.35);
+        }
+        .classroom-layout-wrapper { padding: 40px; background: #fafafa; }
+        .classroom-layout {
+            background: #f5f5f5;
+            border: 4px solid #000;
+            border-radius: 12px;
+            padding: 40px;
+            min-height: 800px;
+        }
+        .classroom-board {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2c3e50 100%);
+            color: #f0f0f0;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 50px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            border: 3px solid #000;
+        }
+        .bench-sections { display: grid; grid-template-columns: repeat(4, 1fr); gap: 30px; margin-bottom: 30px; }
+        .bench-section { display: flex; flex-direction: column; gap: 12px; }
+        .bench-section-label { text-align: center; font-size: 0.85rem; font-weight: 700; color: #666; margin-bottom: 8px; }
+        .bench {
+            background: white;
+            border: 2px solid #999;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+        }
+        .bench-label {
+            background: linear-gradient(135deg, #f0f4f8 0%, #e5e7eb 100%);
+            padding: 10px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #333;
+        }
+        .bench-rows { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+        }
+        .benchmark-seat {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 16px 12px;
+            min-height: 140px;
+            text-align: center;
+            border-right: 1px solid #ddd;
+            color: white;
+            font-weight: 600;
+            line-height: 1.4;
+            position: relative;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .benchmark-seat:hover {
+            transform: translateY(-2px);
+            box-shadow: inset 0 0 8px rgba(0,0,0,0.1);
+        }
+        .benchmark-seat:last-child { border-right: none; }
+        .benchmark-seat.empty {
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            color: #999;
+            border: 2px dashed #bbb;
+            border-right: 2px dashed #bbb;
+        }
+        .benchmark-seat.empty:last-child {
+            border-right: 2px dashed #bbb;
+        }
+        .seat-number {
+            font-weight: 600;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            color: inherit;
+            opacity: 0.85;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .benchmark-seat.empty .seat-number {
+            color: #666;
+        }
+        .register-number {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 8px;
+            letter-spacing: 0.3px;
+        }
+        .benchmark-seat.empty .register-number {
+            color: #999;
+            font-size: 0.95rem;
+        }
+        .dept-year {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            margin-top: 4px;
+            line-height: 1.3;
+        }
+        .benchmark-seat.empty .dept-year {
+            color: #999;
+            margin-top: 0;
+        }
+        .dept-cse { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important; color: white !important; }
+        .dept-it { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%) !important; color: white !important; }
+        .dept-ece { background: linear-gradient(135deg, #e67e22 0%, #d35400 100%) !important; color: white !important; }
+        .dept-mech { background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%) !important; color: white !important; }
+        .dept-civil { background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%) !important; color: white !important; }
+        .dept-eee { background: linear-gradient(135deg, #f39c12 0%, #d68910 100%) !important; color: #333 !important; }
+        .dept-aids { background: linear-gradient(135deg, #c0392b 0%, #a93226 100%) !important; color: white !important; }
+        .dept-aiml { background: linear-gradient(135deg, #8e44ad 0%, #7d3c98 100%) !important; color: white !important; }
+        @media (max-width: 1200px) {
+            .bench-sections { grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        }
+        @media (max-width: 768px) {
+            .bench-sections { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="page-header">
+        <div class="header-title">
+            <h1><i class="fas fa-chair"></i> Classroom Seating Layout</h1>
+        </div>
+        <div class="header-actions">
+            <a href="{{ url_for('view_results') }}" class="btn btn-secondary">
+                <i class="fas fa-table"></i> Table View
+            </a>
+            <button onclick="window.print()" class="btn btn-secondary">
+                <i class="fas fa-print"></i> Print
+            </button>
+            <a href="{{ url_for('oncampus_dashboard') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Group students by room -->
+    {% set rooms = rooms_with_benches %}
+
+    <!-- Render each room -->
+    {% for room_num, room_data in rooms.items() | sort %}
+        <div class="classroom-container">
+            <!-- Room Header -->
+            <div class="room-header">
+                <div class="room-title"><i class="fas fa-door-open"></i> Room {{ room_data.room_number }}</div>
+                <div class="room-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-users"></i></div>
+                        <div class="stat-content">
+                            <h4>Students</h4>
+                            <p class="stat-value">{{ room_data.students_count }}</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-chair"></i></div>
+                        <div class="stat-content">
+                            <h4>Empty</h4>
+                            <p class="stat-value">{{ room_data.empty_count }}</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Badges -->
+                <div class="badge-group">
+                    <span class="badge-label">Depts:</span>
+                    {% for dept in room_data.departments %}
+                        <div class="badge">{{ dept }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Classroom Layout -->
+            <div class="classroom-layout-wrapper">
+                <div class="classroom-layout">
+                    <div class="classroom-board">BOARD / EXAMINER AREA</div>
+                    
+                    <div class="bench-sections">
+                        <!-- LEFT: Benches 1-5 -->
+                        <div class="bench-section">
+                            <div class="bench-section-label">LEFT</div>
+                            {% for bench in room_data.benches %}
+                                {% if bench.bench_number >= 1 and bench.bench_number <= 5 %}
+                                    <div class="bench">
+                                        <div class="bench-label">Bench {{ bench.bench_number }}</div>
+                                        <div class="bench-rows">
+                                            <!-- Left Seat -->
+                                            {% if bench.left_student %}
+                                                {% set s1 = bench.left_student %}
+                                                {% set seat_num = (bench.bench_number - 1) * 2 + 1 %}
+                                                {% set dtype = s1.get('department', 'AIDS') | lower | replace(' ', '') %}
+                                                <div class="benchmark-seat dept-{{ dtype }}">
+                                                    <div class="seat-number">Seat {{ seat_num }}</div>
+                                                    <div class="register-number">{{ s1.get('register_number', '') }}</div>
+                                                    <div class="dept-year">{{ s1.get('department', '') }}<br/>Year {{ s1.get('year', '') }}</div>
+                                                </div>
+                                            {% else %}
+                                                {% set seat_num = (bench.bench_number - 1) * 2 + 1 %}
+                                                <div class="benchmark-seat empty">
+                                                    <div class="seat-number">Seat {{ seat_num }}</div>
+                                                    <div class="register-number">EMPTY</div>
+                                                </div>
+                                            {% endif %}
+                                            
+                                            <!-- Right Seat -->
+                                            {% if bench.right_student %}
+                                                {% set s2 = bench.right_student %}
+                                                {% set seat_num = bench.bench_number * 2 %}
+                                                {% set dtype = s2.get('department', 'AIDS') | lower | replace(' ', '') %}
+                                                <div class="benchmark-seat dept-{{ dtype }}">
+                                                    <div class="seat-number">Seat {{ seat_num }}</div>
+                                                    <div class="register-number">{{ s2.get('register_number', '') }}</div>
+                                                    <div class="dept-year">{{ s2.get('department', '') }}<br/>Year {{ s2.get('year', '') }}</div>
+                                                </div>
+                                            {% else %}
+                                                {% set seat_num = bench.bench_number * 2 %}
+                                                <div class="benchmark-seat empty">
+                                                    <div class="seat-number">Seat {{ seat_num }}</div>
+                                                    <div class="register-number">EMPTY</div>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+
+                        <!-- MIDDLE-LEFT: Benches 6-10 -->
+                        <div class="bench-section">
+                            <div class="bench-section-label">MIDDLE-LEFT</div>
+                            {% for bench in room_data.benches %}
+                                {% if bench.bench_number >= 6 and bench.bench_number <= 10 %}
+                                    <div class="bench">
+                                        <div class="bench-label">Bench {{ bench.bench_number }}</div>
+                                        <div class="bench-rows">
+                                            <!-- Left Seat -->
+                                            {% if bench.left_student %}
+                                                {% set s1 = bench.left_student %}
+                                                {% set seat_num = (bench.bench_number - 1) * 2 + 1 %}
+                                                {% set dtype = s1.get('department', 'AIDS') | lower | replace(' ', '') %}
+                                                <div class="benchmark-seat dept-{{ dtype }}">
+                                                    <div class="seat-number">Seat {{ seat_num }}</div>
+                                                    <div class="register-number">{{ s1.get('register_number', '') }}</div>
+                                                    <div class="dept-year">{{ s1.get('department', '') }}<br/>Year {{ s1.get('year', '') }}</div>
+                                                </div>
+                                            {% else %}
+                                                {% set seat_num = (bench.bench_number - 1) * 2 + 1 %}
+                                                <div class="benchmark-seat empty">
+                                                    <div class="seat-number">Seat {{ seat_num }}</div>
+                                                    <div class="register-number">EMPTY</div>
+                                                </div>
+                                            {% endif %}
+                                            
+                                            <!-- Right Seat -->
+                                            {% if bench.right_student %}
+                                                {% set s2 = bench.right_student %}
+                                                {% set seat_num = bench.bench_number * 2 %}
+                                                {% set dtype = s2.get('department', 'AIDS') | lower | replace(' ', '') %}
+                                                <div class="benchmark-seat dept-{{ dtype }}">
+                                                    <div class="seat-number">Seat {{ seat_num }}</div>
+                                                    <div class="register-number">{{ s2.get('register_number', '') }}</div>
+                                                    <div class="dept-year">{{ s2.get('department', '') }}<br/>Year {{ s2.get('year', '') }}</div>
+                                                </div>
+                                            {% else %}
+                                                {% set seat_num = bench.bench_number * 2 %}
+                                                <div class="benchmark-seat empty">
+                                                    <div class="seat-number">Seat {{ seat_num }}</div>
+                                                    <div class="register-number">EMPTY</div>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+
+                        <!-- MIDDLE-RIGHT: Benches 11-15 -->
+                        <div class="bench-section">
+                            <div class="bench-section-label">MIDDLE-RIGHT</div>
+                            {% for bench in room_data.benches %}
+                                {% if bench.bench_number >= 11 and bench.bench_number <= 15 %}
+                                    <div class="bench">
+                                        <div class="bench-label">Bench {{ bench.bench_number }}</div>
+                                        <div class="bench-rows">
+                                            <!-- Left Seat -->
+                                            {% if bench.left_student %}
+                                                {% set s1 = bench.left_student %}
+                                                {% set seat_num = (bench.bench_number - 1) * 2 + 1 %}
+                                                {% set dtype = s1.get('department', 'AIDS') | lower | replace(' ', '') %}
+                                                <div class="benchmark-seat dept-{{ dtype }}">
+                                                    <div class="seat-number">Seat {{ seat_num }}</div>
+                                                    <div class="register-number">{{ s1.get('register_number', '') }}</div>
+                                                    <div class="dept-year">{{ s1.get('department', '') }}<br/>Year {{ s1.get('year', '') }}</div>
+                                                </div>
+                                            {% else %}
+                                                {% set seat_num = (bench.bench_number - 1) * 2 + 1 %}
+                                                <div class="benchmark-seat empty">
+                                                    <div class="seat-number">Seat {{ seat_num }}</div>
+                                                    <div class="register-number">EMPTY</div>
+                                                </div>
+                                            {% endif %}
+                                            
+                                            <!-- Right Seat -->
+                                            {% if bench.right_student %}
+                                                {% set s2 = bench.right_student %}
+                                                {% set seat_num = bench.bench_number * 2 %}
+                                                {% set dtype = s2.get('department', 'AIDS') | lower | replace(' ', '') %}
+                                                <div class="benchmark-seat dept-{{ dtype }}">
+                                                    <div class="seat-number">Seat {{ seat_num }}</div>
+                                                    <div class="register-number">{{ s2.get('register_number', '') }}</div>
+                                                    <div class="dept-year">{{ s2.get('department', '') }}<br/>Year {{ s2.get('year', '') }}</div>
+                                                </div>
+                                            {% else %}
+                                                {% set seat_num = bench.bench_number * 2 %}
+                                                <div class="benchmark-seat empty">
+                                                    <div class="seat-number">Seat {{ seat_num }}</div>
+                                                    <div class="register-number">EMPTY</div>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+
+                        <!-- RIGHT: Benches 16-20 -->
+                        <div class="bench-section">
+                            <div class="bench-section-label">RIGHT</div>
+                            {% for bench in room_data.benches %}
+                                {% if bench.bench_number >= 16 and bench.bench_number <= 20 %}
+                                    <div class="bench">
+                                        <div class="bench-label">Bench {{ bench.bench_number }}</div>
+                                        <div class="bench-rows">
+                                            <!-- Left Seat -->
+                                            {% if bench.left_student %}
+                                                {% set s1 = bench.left_student %}
+                                                {% set seat_num = (bench.bench_number - 1) * 2 + 1 %}
+                                                {% set dtype = s1.get('department', 'AIDS') | lower | replace(' ', '') %}
+                                                <div class="benchmark-seat dept-{{ dtype }}">
+                                                    <div class="seat-number">Seat {{ seat_num }}</div>
+                                                    <div class="register-number">{{ s1.get('register_number', '') }}</div>
+                                                    <div class="dept-year">{{ s1.get('department', '') }}<br/>Year {{ s1.get('year', '') }}</div>
+                                                </div>
+                                            {% else %}
+                                                {% set seat_num = (bench.bench_number - 1) * 2 + 1 %}
+                                                <div class="benchmark-seat empty">
+                                                    <div class="seat-number">Seat {{ seat_num }}</div>
+                                                    <div class="register-number">EMPTY</div>
+                                                </div>
+                                            {% endif %}
+                                            
+                                            <!-- Right Seat -->
+                                            {% if bench.right_student %}
+                                                {% set s2 = bench.right_student %}
+                                                {% set seat_num = bench.bench_number * 2 %}
+                                                {% set dtype = s2.get('department', 'AIDS') | lower | replace(' ', '') %}
+                                                <div class="benchmark-seat dept-{{ dtype }}">
+                                                    <div class="seat-number">Seat {{ seat_num }}</div>
+                                                    <div class="register-number">{{ s2.get('register_number', '') }}</div>
+                                                    <div class="dept-year">{{ s2.get('department', '') }}<br/>Year {{ s2.get('year', '') }}</div>
+                                                </div>
+                                            {% else %}
+                                                {% set seat_num = bench.bench_number * 2 %}
+                                                <div class="benchmark-seat empty">
+                                                    <div class="seat-number">Seat {{ seat_num }}</div>
+                                                    <div class="register-number">EMPTY</div>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</body>
+</html>

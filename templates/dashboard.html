@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Admin Dashboard - College Seating System">
+    <title>Dashboard - College Seating</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            width: 220px;
+            background: var(--white);
+            border-right: 1px solid var(--gray-200);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            z-index: 110;
+            transition: var(--transition);
+        }
+
+        .sidebar-nav {
+            padding: 24px 16px;
+        }
+
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: var(--border-radius);
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--gray-600);
+            transition: var(--transition);
+            margin-bottom: 4px;
+        }
+
+        .sidebar-nav a i {
+            width: 20px;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        .sidebar-nav a:hover {
+            background: var(--gray-100);
+            color: var(--gray-800);
+        }
+
+        .sidebar-nav a.active {
+            background: rgba(46, 191, 145, 0.08);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .sidebar-bottom {
+            padding: 16px;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        .sidebar-bottom a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: var(--border-radius);
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--danger);
+            transition: var(--transition);
+        }
+
+        .sidebar-bottom a:hover {
+            background: rgba(231, 76, 60, 0.08);
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-wrap {
+            flex: 1;
+            margin-left: 220px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 32px;
+        }
+
+        /* ===== HEADER ===== */
+        .page-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .page-header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .page-header p {
+            font-size: 0.92rem;
+            color: var(--gray-500);
+            margin-top: 4px;
+        }
+
+        /* ===== EVENT CARDS ===== */
+        .event-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .event-card {
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--border-radius-lg);
+            padding: 36px 32px;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .event-card:hover {
+            box-shadow: var(--shadow-md);
+            border-color: var(--gray-300);
+        }
+
+        .event-card .event-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 16px;
+            background: rgba(100, 160, 230, 0.1);
+            color: #5B9BD5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .event-card h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--gray-900);
+            margin-bottom: 12px;
+        }
+
+        .event-card p {
+            font-size: 0.85rem;
+            color: var(--gray-500);
+            line-height: 1.6;
+            margin-bottom: 24px;
+            max-width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .event-card .btn-primary {
+            padding: 12px 32px;
+            width: auto;
+            min-width: 200px;
+        }
+
+        /* ===== IMPORTS TABLE ===== */
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .section-header h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-header a {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--gray-600);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: var(--transition);
+        }
+
+        .section-header a:hover {
+            color: var(--primary);
+        }
+
+        .imports-table-wrap {
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--border-radius-lg);
+            overflow: hidden;
+            margin-bottom: 40px;
+        }
+
+        .imports-table-wrap table tbody td:first-child {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .imports-table-wrap table tbody td:first-child i {
+            color: var(--gray-400);
+            font-size: 1rem;
+        }
+
+        .detail-link {
+            color: var(--gray-600);
+            font-weight: 500;
+            font-size: 0.85rem;
+            transition: var(--transition);
+        }
+
+        .detail-link:hover {
+            color: var(--primary);
+        }
+
+        /* ===== BOTTOM CARDS ===== */
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .bottom-card {
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--border-radius-lg);
+            padding: 28px;
+            transition: var(--transition);
+        }
+
+        .bottom-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .bottom-card.highlight {
+            background: var(--gray-900);
+            color: white;
+            border-color: var(--gray-900);
+        }
+
+        .bottom-card.highlight .bottom-card-icon {
+            background: rgba(46, 191, 145, 0.2);
+            color: var(--primary);
+        }
+
+        .bottom-card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+            background: var(--gray-100);
+            color: var(--gray-600);
+        }
+
+        .bottom-card h3 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .bottom-card p {
+            font-size: 0.82rem;
+            opacity: 0.7;
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+
+        .bottom-card .btn {
+            padding: 10px 20px;
+            font-size: 0.82rem;
+        }
+
+        .bottom-card.highlight .btn {
+            background: var(--white);
+            color: var(--gray-900);
+        }
+
+        /* Stats card */
+        .stats-card h3 {
+            margin-bottom: 12px;
+        }
+
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .stats-header span:last-child {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--gray-200);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary-gradient);
+            border-radius: 10px;
+            transition: width 1s ease;
+        }
+
+        .stats-footer {
+            font-size: 0.8rem;
+            color: var(--gray-500);
+        }
+
+        /* ===== MOBILE SIDEBAR ===== */
+        .sidebar-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            color: var(--gray-700);
+            cursor: pointer;
+        }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 105;
+        }
+
+        @media (max-width: 900px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .sidebar-overlay.active {
+                display: block;
+            }
+
+            .main-wrap {
+                margin-left: 0;
+            }
+
+            .sidebar-toggle {
+                display: block;
+            }
+
+            .event-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .bottom-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .main-content {
+                padding: 20px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <!-- Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="active" id="nav-dashboard">
+                    <i class="fas fa-th-large"></i> Dashboard
+                </a>
+                <a href="#" id="nav-venues">
+                    <i class="fas fa-map-marker-alt"></i> Venues
+                </a>
+                <a href="#" id="nav-students">
+                    <i class="fas fa-user-graduate"></i> Students
+                </a>
+                <a href="#" id="nav-settings">
+                    <i class="fas fa-cog"></i> Settings
+                </a>
+            </nav>
+            <div class="sidebar-bottom">
+                <a href="index.html" id="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main content -->
+        <div class="main-wrap">
+            <!-- Navbar -->
+            <nav class="navbar" id="navbar">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <button class="sidebar-toggle" id="sidebar-toggle" onclick="toggleSidebar()">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <a href="dashboard.html" class="navbar-brand">
+                        <span class="brand-icon"><i class="fas fa-chair"></i></span>
+                        College Seating
+                    </a>
+                </div>
+                <div class="navbar-actions">
+                    <button class="icon-btn" id="search-btn"><i class="fas fa-search"></i></button>
+                    <button class="icon-btn" id="notifications-btn"><i class="fas fa-bell"></i></button>
+                    <div class="avatar" id="user-avatar">FH</div>
+                </div>
+            </nav>
+
+            <main class="main-content">
+                <!-- Page Header -->
+                <div class="page-header">
+                    <div>
+                        <h1>Campus Events</h1>
+                        <p>Manage seating logistics and coordinate campus-wide examinations.</p>
+                    </div>
+                    <button class="btn btn-primary" id="generate-seating-btn">
+                        <i class="fas fa-cogs"></i> Generate Seating
+                    </button>
+                </div>
+
+                <!-- Event Type Cards -->
+                <div class="event-grid" id="event-grid">
+                    <div class="event-card" id="oncampus-card">
+                        <div class="event-icon">
+                            <svg width="44" height="44" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="14" y="24" width="36" height="28" rx="2" fill="#D6E6F5" stroke="#5B9BD5" stroke-width="2"/>
+                                <rect x="8" y="20" width="48" height="6" rx="2" fill="#5B9BD5"/>
+                                <polygon points="32,8 8,20 56,20" fill="#5B9BD5"/>
+                                <rect x="22" y="34" width="8" height="8" rx="1" fill="#5B9BD5"/>
+                                <rect x="34" y="34" width="8" height="8" rx="1" fill="#5B9BD5"/>
+                                <rect x="28" y="44" width="8" height="8" fill="#5B9BD5"/>
+                                <rect x="30" y="10" width="4" height="6" fill="#4A8BC2"/>
+                                <polygon points="28,10 36,10 32,4" fill="#4A8BC2"/>
+                            </svg>
+                        </div>
+                        <h3>On-Campus Event</h3>
+                        <p>Coordinate seating for internal lecture halls, labs, and auditoriums within the main university grounds.</p>
+                        <a href="{{ url_for('oncampus_dashboard') }}" class="btn btn-primary">Configure On-Campus</a>
+                    </div>
+                    <div class="event-card" id="offcampus-card">
+                        <div class="event-icon">
+                            <svg width="44" height="44" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M32 4C22.06 4 14 11.72 14 21.2C14 34.4 32 56 32 56C32 56 50 34.4 50 21.2C50 11.72 41.94 4 32 4Z" fill="#D6E6F5" stroke="#5B9BD5" stroke-width="2"/>
+                                <circle cx="32" cy="22" r="10" fill="#5B9BD5"/>
+                                <circle cx="32" cy="22" r="5" fill="#D6E6F5"/>
+                            </svg>
+                        </div>
+                        <h3>Off-Campus Event</h3>
+                        <p>Plan logistics for external centers, partner colleges, and city hall venues for centralized exams.</p>
+                        <button class="btn btn-primary">Configure Off-Campus</button>
+                    </div>
+                </div>
+
+                <!-- Recent Student Imports -->
+                <div class="section-header">
+                    <h2><i class="far fa-clock"></i> Recent Student Imports</h2>
+                    <a href="#" id="view-all-imports">View All Imports <i class="fas fa-chevron-right"></i></a>
+                </div>
+
+                <div class="imports-table-wrap" id="imports-table">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Event Name</th>
+                                    <th>Type</th>
+                                    <th>Date Imported</th>
+                                    <th>Records</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><i class="far fa-file-alt"></i> Semester Finals 2024</td>
+                                    <td><span class="badge badge-oncampus">On-Campus</span></td>
+                                    <td>Oct 24, 2023</td>
+                                    <td>1,240 Students</td>
+                                    <td><span class="status"><span class="status-dot completed"></span> Completed</span></td>
+                                    <td><a href="#" class="detail-link">Details</a></td>
+                                </tr>
+                                <tr>
+                                    <td><i class="far fa-file-alt"></i> Entrance Exam - Zone A</td>
+                                    <td><span class="badge badge-offcampus">Off-Campus</span></td>
+                                    <td>Oct 22, 2023</td>
+                                    <td>450 Students</td>
+                                    <td><span class="status"><span class="status-dot completed"></span> Completed</span></td>
+                                    <td><a href="#" class="detail-link">Details</a></td>
+                                </tr>
+                                <tr>
+                                    <td><i class="far fa-file-alt"></i> Placement Mock Test</td>
+                                    <td><span class="badge badge-oncampus">On-Campus</span></td>
+                                    <td>Oct 20, 2023</td>
+                                    <td>890 Students</td>
+                                    <td><span class="status"><span class="status-dot completed"></span> Completed</span></td>
+                                    <td><a href="#" class="detail-link">Details</a></td>
+                                </tr>
+                                <tr>
+                                    <td><i class="far fa-file-alt"></i> Annual Scholarship Test</td>
+                                    <td><span class="badge badge-offcampus">Off-Campus</span></td>
+                                    <td>Oct 18, 2023</td>
+                                    <td>2,100 Students</td>
+                                    <td><span class="status"><span class="status-dot processing"></span> Processing</span></td>
+                                    <td><a href="#" class="detail-link">Details</a></td>
+                                </tr>
+                                <tr>
+                                    <td><i class="far fa-file-alt"></i> Laboratory Finals B1</td>
+                                    <td><span class="badge badge-oncampus">On-Campus</span></td>
+                                    <td>Oct 15, 2023</td>
+                                    <td>120 Students</td>
+                                    <td><span class="status"><span class="status-dot completed"></span> Completed</span></td>
+                                    <td><a href="#" class="detail-link">Details</a></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Bottom Action Cards -->
+                <div class="bottom-grid" id="bottom-actions">
+                    <div class="bottom-card highlight">
+                        <div class="bottom-card-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <h3>Bulk Upload</h3>
+                        <p>Import your student CSV lists directly into the engine.</p>
+                        <button class="btn" id="start-import-btn">Start Import</button>
+                    </div>
+                    <div class="bottom-card">
+                        <div class="bottom-card-icon">
+                            <i class="fas fa-plus-circle"></i>
+                        </div>
+                        <h3>Add Custom Venue</h3>
+                        <p>Register new halls or remote locations.</p>
+                        <button class="btn btn-outline" id="register-venue-btn">Register Venue</button>
+                    </div>
+                    <div class="bottom-card stats-card">
+                        <h3>Active Engine Stats</h3>
+                        <div class="stats-header">
+                            <span style="color:var(--gray-500);font-size:0.85rem;">Total Capacity</span>
+                            <span>4,500 Seats</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 72%;" id="capacity-bar"></div>
+                        </div>
+                        <p class="stats-footer">72% of campus capacity currently mapped for upcoming events.</p>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Footer -->
+            <footer class="footer" id="footer">
+                <span>&copy; 2024 College Seating System. All rights reserved.</span>
+                <div class="footer-links">
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Terms of Service</a>
+                    <span>v1.2.4</span>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebar-overlay').classList.toggle('active');
+        }
+
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebar-overlay').classList.remove('active');
+        }
+
+        // Animate progress bar on load
+        window.addEventListener('load', () => {
+            const bar = document.getElementById('capacity-bar');
+            bar.style.width = '0%';
+            setTimeout(() => { bar.style.width = '72%'; }, 300);
+        });
+    </script>
+</body>
+</html>

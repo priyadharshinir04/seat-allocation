@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Admin Login - College Seating System">
+    <title>Admin Login - College Seating</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .login-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gray-500);
+            padding: 20px;
+            position: relative;
+        }
+
+        .login-page::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(26,26,46,0.6), rgba(46,191,145,0.2));
+        }
+
+        .login-card {
+            background: var(--white);
+            border-radius: var(--border-radius-lg);
+            padding: 48px 40px 40px;
+            width: 100%;
+            max-width: 460px;
+            box-shadow: var(--shadow-xl);
+            position: relative;
+            z-index: 1;
+            animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .login-lock {
+            width: 56px;
+            height: 56px;
+            background: var(--gray-100);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 1.4rem;
+            color: var(--gray-700);
+        }
+
+        .login-header h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 6px;
+        }
+
+        .login-header p {
+            font-size: 0.88rem;
+            color: var(--gray-500);
+        }
+
+        .login-form .form-group {
+            margin-bottom: 20px;
+        }
+
+        .login-actions {
+            margin-top: 28px;
+        }
+
+        .login-actions .btn-primary {
+            width: 100%;
+            padding: 14px;
+            font-size: 1rem;
+            border-radius: var(--border-radius);
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 13px;
+            margin-top: 12px;
+            border-radius: var(--border-radius);
+            border: 1.5px solid var(--gray-300);
+            background: var(--white);
+            color: var(--gray-700);
+            font-weight: 500;
+            font-size: 0.92rem;
+            transition: var(--transition);
+        }
+
+        .back-btn:hover {
+            border-color: var(--gray-400);
+            background: var(--gray-50);
+        }
+
+        .login-footer {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--gray-400);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .login-footer i {
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 32px 24px 28px;
+            }
+        }
+
+        .login-navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 16px 24px;
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            z-index: 999;
+        }
+
+        .login-navbar a {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--gray-700);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+
+        .login-navbar a:hover {
+            color: var(--primary);
+        }
+
+        .login-page {
+            padding-top: 60px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Back Navigation -->
+    <div class="login-navbar">
+        <a href="{{ url_for('index') }}">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+    </div>
+    <div class="login-page" id="login-page">
+        <div class="login-card" id="login-card">
+            <div class="login-header">
+                <div class="login-lock">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <h1>Admin Login</h1>
+                <p>Enter your credentials to manage seating arrangements.</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}" style="margin-bottom: 20px;">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form class="login-form" id="login-form" method="POST" action="{{ url_for('admin_login') }}">
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon"><i class="fas fa-user"></i></span>
+                        <input type="text" class="form-control" name="username" placeholder="Enter username" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Password
+                        <a href="#" id="forgot-password">Forgot Password?</a>
+                    </label>
+                    <div class="input-wrapper">
+                        <span class="input-icon"><i class="fas fa-lock"></i></span>
+                        <input type="password" class="form-control" name="password" placeholder="••••••••" required>
+                        <span class="input-icon-right" id="toggle-password" onclick="togglePassword()">
+                            <i class="fas fa-eye-slash"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="login-actions">
+                    <button type="submit" class="btn btn-primary btn-block btn-lg" id="login-btn">
+                        Login to Dashboard
+                    </button>
+                    <a href="{{ url_for('index') }}" class="back-btn" id="back-btn">
+                        <i class="fas fa-arrow-left"></i> Back to Role Selection
+                    </a>
+                </div>
+            </form>
+
+            <div class="login-footer">
+                <i class="fas fa-shield-halved"></i>
+                Secure Administrative Access Point
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function togglePassword() {
+            const passwordInput = document.querySelector('input[name="password"]');
+            const toggleIcon = document.querySelector('#toggle-password i');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.replace('fa-eye-slash', 'fa-eye');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.replace('fa-eye', 'fa-eye-slash');
+            }
+        }
+    </script>
+</body>
+</html>
