@@ -326,3 +326,5 @@ This project is part of the College Seating System initiative.
 
 **Last Updated**: March 18, 2026
 **Version**: 1.0.0
+#   s e a t - a l l o c a t i o n  
+ 
