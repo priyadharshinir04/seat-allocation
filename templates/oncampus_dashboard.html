@@ -605,7 +605,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for result in allocation_results | slice(0, 50) %}
+                                {% for result in allocation_results[:50] %}
                                 <tr style="border-bottom: 1px solid #e0e0e0; {% if loop.index0 % 2 == 0 %}background: #f9f9f9;{% endif %}">
                                     <td style="padding: 12px; color: #667eea; font-weight: 600;">{{ result['register_number'] }}</td>
                                     <td style="padding: 12px;">{{ result['candidate_name'] }}</td>
