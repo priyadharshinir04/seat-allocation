@@ -1,6 +1,5 @@
 import os
-import pandas as pd
-import numpy as np
+import csv
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file
 from werkzeug.utils import secure_filename
@@ -11,6 +10,8 @@ from PIL import Image
 import logging
 from logging.handlers import RotatingFileHandler
 from twilio.rest import Client
+from openpyxl import Workbook, load_workbook
+from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 
 app = Flask(__name__)
 app.secret_key = "college_seating_secret_key"
@@ -366,104 +367,172 @@ def send_bulk_sms_notifications():
             "verified_count": len(VERIFIED_TEST_NUMBERS)
         }
 
-def validate_student_data(df):
-    """Validate and clean student data"""
-    # Check for required columns (case-insensitive)
-    new_columns = {}
-    for col in df.columns:
-        col_lower = col.lower().strip()
-        if col_lower == 'register number':
-            new_columns[col] = 'Register Number'
-        elif col_lower in ['candidate name', 'student name', 'name']:
-            new_columns[col] = 'Candidate Name'
-        elif col_lower == 'department':
-            new_columns[col] = 'Department'
-        elif 'year' in col_lower or col_lower in ['batch', 'sem']:
-            new_columns[col] = 'Year'
-        elif 'phone' in col_lower or col_lower in ['mobile', 'contact', 'phone number']:
-            new_columns[col] = 'Phone Number'
-        else:
-            new_columns[col] = col
+def read_csv_to_dict(filepath):
+    """Read CSV file into list of dicts"""
+    try:
+        data = []
+        with open(filepath, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                data.append(row)
+        return data
+    except Exception as e:
+        return None
+
+def read_excel_to_dict(filepath):
+    """Read Excel file into list of dicts"""
+    try:
+        wb = load_workbook(filepath)
+        ws = wb.active
+        
+        # Get headers from first row
+        headers = []
+        for cell in ws[1]:
+            headers.append(cell.value)
+        
+        # Read data rows
+        data = []
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            row_dict = {}
+            for i, header in enumerate(headers):
+                row_dict[header] = row[i] if i < len(row) else None
+            data.append(row_dict)
+        
+        return data
+    except Exception as e:
+        return None
+
+def validate_student_data(data):
+    """Validate and clean student data - works with list of dicts"""
+    if not data or not isinstance(data, list):
+        return None, "Invalid data format"
     
-    df = df.rename(columns=new_columns)
+    # Normalize column names
+    normalized_data = []
+    column_map = {}
     
+    if data:
+        first_row = data[0]
+        for col in first_row.keys():
+            col_lower = col.lower().strip()
+            if col_lower == 'register number':
+                column_map[col] = 'Register Number'
+            elif col_lower in ['candidate name', 'student name', 'name']:
+                column_map[col] = 'Candidate Name'
+            elif col_lower == 'department':
+                column_map[col] = 'Department'
+            elif 'year' in col_lower or col_lower in ['batch', 'sem']:
+                column_map[col] = 'Year'
+            elif 'phone' in col_lower or col_lower in ['mobile', 'contact', 'phone number']:
+                column_map[col] = 'Phone Number'
+            else:
+                column_map[col] = col
+    
+    # Create normalized rows
+    for row in data:
+        normalized_row = {}
+        for old_col, val in row.items():
+            new_col = column_map.get(old_col, old_col)
+            normalized_row[new_col] = val
+        normalized_data.append(normalized_row)
+    
+    # Check for required columns
     required_columns = ['Register Number', 'Candidate Name', 'Department']
-    missing_cols = [col for col in required_columns if col not in df.columns]
-    if missing_cols:
-        return None, f"Missing columns: {', '.join(missing_cols)}"
+    if normalized_data:
+        missing_cols = [col for col in required_columns if col not in normalized_data[0].keys()]
+        if missing_cols:
+            return None, f"Missing columns: {', '.join(missing_cols)}"
     
     # Remove rows with missing values in required columns
-    df = df.dropna(subset=required_columns)
+    cleaned_data = []
+    for row in normalized_data:
+        if (row.get('Register Number') is not None and row.get('Register Number') != '' and
+            row.get('Candidate Name') is not None and row.get('Candidate Name') != '' and
+            row.get('Department') is not None and row.get('Department') != ''):
+            cleaned_data.append(row)
     
     # Parse Year column if it exists
-    if 'Year' in df.columns:
-        def parse_year(year_val):
-            if pd.isna(year_val):
-                return '0'
-            year_str = str(year_val).strip().lower()
-            # Handle "2nd Year", "3rd Year", "4th Year", "1st Year" format
-            year_str = year_str.replace('st ', '') \
-                              .replace('nd ', '') \
-                              .replace('rd ', '') \
-                              .replace('th ', '') \
-                              .replace('year', '') \
-                              .strip()
-            # Extract first digit
-            for char in year_str:
-                if char.isdigit():
-                    return char
-            return '0'
-        
-        df['Year'] = df['Year'].apply(parse_year)
+    if cleaned_data and 'Year' in cleaned_data[0]:
+        for row in cleaned_data:
+            year_val = row.get('Year')
+            if year_val is None or year_val == '':
+                row['Year'] = '0'
+            else:
+                year_str = str(year_val).strip().lower()
+                # Handle "2nd Year", "3rd Year", "4th Year", "1st Year" format
+                year_str = year_str.replace('st ', '') \
+                                  .replace('nd ', '') \
+                                  .replace('rd ', '') \
+                                  .replace('th ', '') \
+                                  .replace('year', '') \
+                                  .strip()
+                # Extract first digit
+                found = False
+                for char in year_str:
+                    if char.isdigit():
+                        row['Year'] = char
+                        found = True
+                        break
+                if not found:
+                    row['Year'] = '0'
     
     # Clean phone numbers if present (optional field)
-    if 'Phone Number' in df.columns:
-        def clean_phone(phone_val):
-            if pd.isna(phone_val):
-                return ''
-            phone_str = str(phone_val).strip()
-            # Remove common separators
-            phone_str = phone_str.replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
-            return phone_str
-        
-        df['Phone Number'] = df['Phone Number'].apply(clean_phone)
+    if cleaned_data and 'Phone Number' in cleaned_data[0]:
+        for row in cleaned_data:
+            phone_val = row.get('Phone Number')
+            if phone_val is None or phone_val == '':
+                row['Phone Number'] = ''
+            else:
+                phone_str = str(phone_val).strip()
+                # Remove common separators
+                phone_str = phone_str.replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
+                row['Phone Number'] = phone_str
     
     # Remove duplicates
-    df = df.drop_duplicates(subset=['Register Number'])
+    seen = set()
+    unique_data = []
+    for row in cleaned_data:
+        reg_no = row.get('Register Number')
+        if reg_no not in seen:
+            seen.add(reg_no)
+            unique_data.append(row)
     
-    # Reset index
-    df = df.reset_index(drop=True)
-    
-    return df, None
+    return unique_data, None
 
-def internal_exam_allocation(students_df):
+def internal_exam_allocation(students_list):
     """
     Internal Exam Allocation - 2 students per bench
     - 20 benches per classroom = 40 students per classroom
     - Each bench: 2 students from different departments and different years
     - Sorted by Register Number within each Year group for structured seating
     """
-    if students_df is None or students_df.empty:
+    if not students_list:
         return None, "No students to allocate"
     
-    # Sort by Year and Register Number for structured allocation (not random shuffle)
-    df = students_df.sort_values(by=['Year', 'Register Number']).reset_index(drop=True)
+    # Convert to list of dicts if needed and sort
+    students_data = students_list if isinstance(students_list, list) else list(students_list)
     
-    # Group by Department + Year, maintaining sorted order
+    # Sort by Year and Register Number
+    students_data = sorted(students_data, 
+                          key=lambda x: (str(x.get('Year', '0')), str(x.get('Register Number', ''))))
+    
+    # Group by Department + Year
     groups = {}
-    for (dept, year), group in df.groupby(['Department', 'Year'], sort=False):
-        # Sort within group by Register Number to maintain ascending order
-        group = group.sort_values('Register Number').reset_index(drop=True)
-        group_list = []
-        for _, row in group.iterrows():
-            group_list.append({
-                'register_number': row['Register Number'],
-                'candidate_name': row['Candidate Name'],
-                'department': row['Department'],
-                'year': str(year),
-                'phone_number': row.get('Phone Number', '')
-            })
-        groups[(dept, year)] = group_list
+    for student in students_data:
+        dept = student.get('Department', '')
+        year = str(student.get('Year', '0'))
+        key = (dept, year)
+        
+        if key not in groups:
+            groups[key] = []
+        
+        groups[key].append({
+            'register_number': student.get('Register Number', ''),
+            'candidate_name': student.get('Candidate Name', ''),
+            'department': student.get('Department', ''),
+            'year': year,
+            'phone_number': student.get('Phone Number', '')
+        })
     
     # Create valid pairs (dept1 ≠ dept2 AND year1 ≠ year2)
     valid_pairs = []
@@ -626,7 +695,7 @@ def internal_exam_allocation(students_df):
     
     return allocation, None
 
-def semester_exam_allocation(students_df):
+def semester_exam_allocation(students_list):
     """
     Semester Exam Allocation - 1 student per bench
     - 20 benches per classroom = 20 students per classroom
@@ -634,32 +703,50 @@ def semester_exam_allocation(students_df):
     - Same year per room
     - Sorted by Register Number within each department
     """
-    if students_df is None or students_df.empty:
+    if not students_list:
         return None, "No students to allocate"
     
-    # Make a copy to avoid modifying the original
-    df = students_df.copy()
+    # Convert to list of dicts if needed
+    students_data = students_list if isinstance(students_list, list) else list(students_list)
     
-    # Add Year column if it doesn't exist (default to '1')
-    if 'Year' not in df.columns:
-        df['Year'] = '1'
+    # Ensure all students have a Year (default to '1')
+    for student in students_data:
+        if 'Year' not in student:
+            student['Year'] = '1'
+    
+    # Group by Year
+    year_groups = {}
+    for student in students_data:
+        year = str(student.get('Year', '1'))
+        if year not in year_groups:
+            year_groups[year] = []
+        year_groups[year].append(student)
     
     allocation = []
     current_room = 1
     
     # Process each year separately
-    for year_val in sorted(df['Year'].unique()):
-        year_students = df[df['Year'] == year_val].copy()
+    for year_val in sorted(year_groups.keys()):
+        year_students = year_groups[year_val]
         
-        # Group and sort by department
+        # Group by department and sort
+        dept_dict = {}
+        for student in year_students:
+            dept = student.get('Department', '')
+            if dept not in dept_dict:
+                dept_dict[dept] = []
+            dept_dict[dept].append(student)
+        
+        # Sort each department by Register Number
         dept_queues = {}
-        for dept in sorted(year_students['Department'].unique()):
-            students_list = year_students[year_students['Department'] == dept].sort_values('Register Number').reset_index(drop=True)
-            dept_queues[dept] = students_list.to_dict('records')
+        for dept in sorted(dept_dict.keys()):
+            sorted_students = sorted(dept_dict[dept], 
+                                   key=lambda x: str(x.get('Register Number', '')))
+            dept_queues[dept] = list(sorted_students)
         
         # Allocate to rooms
-        while any(dept_queues.values()):  # While any queue has students
-            # Get 2 departments with students
+        while any(dept_queues.values()):
+            # Get available departments with students
             available_depts = [d for d in dept_queues if dept_queues[d]]
             
             if not available_depts:
@@ -675,9 +762,9 @@ def semester_exam_allocation(students_df):
                 if dept_queues[dept1] and bench <= 20:
                     student_dict = dept_queues[dept1].pop(0)
                     allocation.append({
-                        'register_number': student_dict['Register Number'],
-                        'candidate_name': student_dict['Candidate Name'],
-                        'department': student_dict['Department'],
+                        'register_number': student_dict.get('Register Number', ''),
+                        'candidate_name': student_dict.get('Candidate Name', ''),
+                        'department': student_dict.get('Department', ''),
                         'year': str(year_val),
                         'phone_number': student_dict.get('Phone Number', ''),
                         'room_number': current_room,
@@ -689,9 +776,9 @@ def semester_exam_allocation(students_df):
                 if dept2 and dept_queues[dept2] and bench <= 20:
                     student_dict = dept_queues[dept2].pop(0)
                     allocation.append({
-                        'register_number': student_dict['Register Number'],
-                        'candidate_name': student_dict['Candidate Name'],
-                        'department': student_dict['Department'],
+                        'register_number': student_dict.get('Register Number', ''),
+                        'candidate_name': student_dict.get('Candidate Name', ''),
+                        'department': student_dict.get('Department', ''),
                         'year': str(year_val),
                         'phone_number': student_dict.get('Phone Number', ''),
                         'room_number': current_room,
@@ -1016,20 +1103,24 @@ def candidate_upload():
             # Read file based on extension
             file_ext = filename.rsplit('.', 1)[1].lower()
             if file_ext == 'csv':
-                df = pd.read_csv(filepath)
+                data = read_csv_to_dict(filepath)
             else:  # xlsx or xls
-                df = pd.read_excel(filepath)
+                data = read_excel_to_dict(filepath)
+            
+            if data is None:
+                flash('Error reading file', 'error')
+                return render_template('upload.html', config=config)
             
             # Validate and clean data
-            cleaned_df, error = validate_student_data(df)
+            cleaned_data, error = validate_student_data(data)
             if error:
                 flash(f'Data validation error: {error}', 'error')
                 return render_template('upload.html', config=config)
             
-            students_data = cleaned_df
+            students_data = cleaned_data
             
-            flash(f'✓ Successfully uploaded {len(cleaned_df)} valid candidates!', 'success')
-            session['students_count'] = len(cleaned_df)
+            flash(f'✓ Successfully uploaded {len(cleaned_data)} valid candidates!', 'success')
+            session['students_count'] = len(cleaned_data)
             session.modified = True
             
             return redirect(url_for('allocate_seats'))
@@ -1072,24 +1163,29 @@ def exam_schedule_upload():
             # Read file based on extension
             file_ext = filename.rsplit('.', 1)[1].lower()
             if file_ext == 'csv':
-                df = pd.read_csv(filepath)
+                data = read_csv_to_dict(filepath)
             else:  # xlsx or xls
-                df = pd.read_excel(filepath)
+                data = read_excel_to_dict(filepath)
+            
+            if data is None:
+                flash('Error reading file', 'error')
+                return render_template('exam_schedule_upload.html', config=config)
             
             # Validate required columns
             required_columns = ['Year', 'Subject Code', 'Subject Name', 'Exam Date', 'Exam Time']
-            missing_cols = [col for col in required_columns if col not in df.columns]
+            if data:
+                missing_cols = [col for col in required_columns if col not in data[0].keys()]
+                if missing_cols:
+                    flash(f'Missing required columns: {", ".join(missing_cols)}', 'error')
+                    return render_template('exam_schedule_upload.html', config=config)
             
-            if missing_cols:
-                flash(f'Missing required columns: {", ".join(missing_cols)}', 'error')
-                return render_template('exam_schedule_upload.html', config=config)
-            
-            # Validate data
-            df = df.dropna(subset=required_columns)
-            
-            # Convert to list of dicts
+            # Filter out rows with missing required values
+            filtered_data = []
+            for row in data:
+                if all(row.get(col) is not None and row.get(col) != '' for col in required_columns):
+                    filtered_data.append(row)
             exam_schedules = []
-            for _, row in df.iterrows():
+            for row in filtered_data:
                 schedule_entry = {
                     'year': str(row['Year']).strip(),
                     'department': str(row.get('Department', 'ALL')).strip(),
@@ -1123,11 +1219,7 @@ def allocate_seats():
         return redirect(url_for('oncampus_config'))
     
     # Check if students_data is empty
-    if isinstance(students_data, pd.DataFrame):
-        if students_data.empty:
-            flash('Please upload candidate data first!', 'error')
-            return redirect(url_for('candidate_upload'))
-    else:
+    if not students_data:
         flash('Please upload candidate data first!', 'error')
         return redirect(url_for('candidate_upload'))
     
@@ -1290,7 +1382,6 @@ def export_seating():
         return redirect(url_for('view_seating'))
     
     try:
-        from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
         from openpyxl.utils import get_column_letter
         
         filename = f"seating_arrangement_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
@@ -1304,112 +1395,101 @@ def export_seating():
                 rooms_data[room_no] = []
             rooms_data[room_no].append(result)
         
-        # Create Excel file with multiple sheets
-        with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
-            # Create a summary sheet first
-            summary_data = []
-            for room_no in sorted(rooms_data.keys()):
-                room_students = rooms_data[room_no]
-                summary_data.append({
-                    'Room Number': room_no,
-                    'Total Seats': len(room_students),
-                    'Departments': ', '.join(sorted(set(s['department'] for s in room_students))),
-                    'Years': ', '.join(sorted(set(str(s['year']) for s in room_students)))
-                })
+        # Create workbook
+        wb = Workbook()
+        wb.remove(wb.active)  # Remove default sheet
+        
+        # Create summary sheet
+        ws_summary = wb.create_sheet('Summary', 0)
+        ws_summary.append(['Room Number', 'Total Seats', 'Departments', 'Years'])
+        
+        header_fill = PatternFill(start_color='4F46E5', end_color='4F46E5', fill_type='solid')
+        header_font = Font(color='FFFFFF', bold=True, size=11)
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), 
+                            top=Side(style='thin'), bottom=Side(style='thin'))
+        
+        # Format summary header
+        for cell in ws_summary[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.border = thin_border
+        
+        # Add summary data
+        for room_no in sorted(rooms_data.keys()):
+            room_students = rooms_data[room_no]
+            depts = ', '.join(sorted(set(str(s.get('department', 'N/A')) for s in room_students)))
+            years = ', '.join(sorted(set(str(s.get('year', 'N/A')) for s in room_students)))
+            ws_summary.append([room_no, len(room_students), depts, years])
             
-            summary_df = pd.DataFrame(summary_data)
-            summary_df.to_excel(writer, sheet_name='Summary', index=False)
+            for cell in ws_summary[ws_summary.max_row]:
+                cell.border = thin_border
+        
+        # Create sheets for each room
+        for room_no in sorted(rooms_data.keys()):
+            room_students = rooms_data[room_no]
             
-            # Create a sheet for each room
-            for room_no in sorted(rooms_data.keys()):
-                room_students = rooms_data[room_no]
-                df_room = pd.DataFrame(room_students)
+            # Determine columns to display
+            columns = ['Register Number', 'Candidate Name', 'Department', 'Year']
+            
+            # Check what fields are available
+            if room_students and 'bench_number' in room_students[0]:
+                columns.insert(3, 'Bench')
+            if room_students and 'seat_position' in room_students[0]:
+                columns.insert(4, 'Position')
+            
+            # Create sheet for room
+            ws_room = wb.create_sheet(f'Room {room_no}')
+            ws_room.append(columns)
+            
+            # Format header
+            for cell in ws_room[1]:
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.border = thin_border
+            
+            # Map student data to columns
+            for student in room_students:
+                row_data = [
+                    student.get('register_number', ''),
+                    student.get('candidate_name', ''),
+                    student.get('department', ''),
+                    student.get('year', '')
+                ]
                 
-                # Select columns to display
-                columns_to_show = ['register_number', 'candidate_name', 'department', 'year']
-                
-                # Check if this is internal exam (has seat_position)
-                if 'seat_position' in df_room.columns:
-                    columns_to_show.insert(4, 'seat_position')
-                    columns_to_show.insert(3, 'bench_number')
-                
-                # Check if this is semester exam (has bench_number but no seat_position)
-                elif 'bench_number' in df_room.columns and 'seat_position' not in df_room.columns:
-                    columns_to_show.insert(3, 'bench_number')
-                
-                # Reorder columns: Register Number, Name, Department, Year, [Bench], [Position]
-                available_cols = [col for col in columns_to_show if col in df_room.columns]
-                df_room_display = df_room[available_cols].copy()
-                
-                # Rename columns for better readability
-                rename_map = {
-                    'register_number': 'Register Number',
-                    'candidate_name': 'Candidate Name',
-                    'department': 'Department',
-                    'year': 'Year',
-                    'bench_number': 'Bench',
-                    'seat_position': 'Position'
-                }
-                df_room_display = df_room_display.rename(columns=rename_map)
-                
-                # Sort by bench and position for internal exam
-                if 'Bench' in df_room_display.columns:
-                    if 'Position' in df_room_display.columns:
-                        # Internal exam: sort by Bench, then by Position (Left first)
-                        df_room_display = df_room_display.sort_values(['Bench', 'Position'], 
-                                                                      key=lambda x: x.map({'Left': 0, 'Right': 1}) if x.name == 'Position' else x)
+                if 'Bench' in columns:
+                    row_data.insert(3, student.get('bench_number', ''))
+                if 'Position' in columns:
+                    if 'Bench' in columns:
+                        row_data.insert(4, student.get('seat_position', ''))
                     else:
-                        # Semester exam: sort by Bench
-                        df_room_display = df_room_display.sort_values('Bench')
+                        row_data.insert(3, student.get('seat_position', ''))
                 
-                # Write to sheet
-                sheet_name = f'Room {room_no}'
-                df_room_display.to_excel(writer, sheet_name=sheet_name, index=False)
-                
-                # Format the sheet
-                worksheet = writer.sheets[sheet_name]
-                
-                # Header styling
-                header_fill = PatternFill(start_color='4F46E5', end_color='4F46E5', fill_type='solid')
-                header_font = Font(color='FFFFFF', bold=True, size=11)
-                header_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-                
-                # Border style
-                thin_border = Border(
-                    left=Side(style='thin'),
-                    right=Side(style='thin'),
-                    top=Side(style='thin'),
-                    bottom=Side(style='thin')
-                )
-                
-                # Apply header formatting
-                for cell in worksheet[1]:
-                    cell.fill = header_fill
-                    cell.font = header_font
-                    cell.alignment = header_alignment
+                ws_room.append(row_data)
+            
+            # Format data rows and set column widths
+            header_count = len(columns)
+            for row_idx, row in enumerate(ws_room.iter_rows(min_row=1, max_row=ws_room.max_row), 1):
+                for cell in row:
                     cell.border = thin_border
-                
-                # Apply data formatting and auto-fit columns
-                for row in worksheet.iter_rows(min_row=2, max_row=worksheet.max_row, min_col=1, max_col=worksheet.max_column):
-                    for cell in row:
-                        cell.border = thin_border
+                    if row_idx > 1:
                         cell.alignment = Alignment(horizontal='left', vertical='center')
-                
-                # Auto-fit column widths
-                for column in worksheet.columns:
-                    max_length = 0
-                    column_letter = get_column_letter(column[0].column)
-                    for cell in column:
-                        try:
-                            if cell.value:
-                                max_length = max(max_length, len(str(cell.value)))
-                        except:
-                            pass
-                    adjusted_width = min(max_length + 2, 50)
-                    worksheet.column_dimensions[column_letter].width = adjusted_width
-                
-                # Freeze header row
-                worksheet.freeze_panes = 'A2'
+            
+            # Auto-fit column widths
+            for col_idx, column in enumerate(ws_room.columns, 1):
+                max_length = len(str(columns[col_idx - 1])) if col_idx <= len(columns) else 0
+                for cell in column:
+                    try:
+                        if cell.value:
+                            max_length = max(max_length, len(str(cell.value)))
+                    except:
+                        pass
+                ws_room.column_dimensions[get_column_letter(col_idx)].width = min(max_length + 2, 50)
+            
+            # Freeze header
+            ws_room.freeze_panes = 'A2'
+        
+        # Save workbook
+        wb.save(filepath)
         
         flash(f'✓ Exported to {filename} ({len(rooms_data)} rooms in separate sheets)', 'success')
         return redirect(url_for('view_seating'))
@@ -1922,23 +2002,28 @@ def upload_students():
             file_ext = filename.rsplit('.', 1)[1].lower()
             
             if file_ext == 'csv':
-                df = pd.read_csv(filepath)
+                data = read_csv_to_dict(filepath)
             elif file_ext in ['xlsx', 'xls']:
-                # pandas will auto-detect the best engine with openpyxl available
-                df = pd.read_excel(filepath)
+                data = read_excel_to_dict(filepath)
             else:
                 flash(f'Unsupported file format: {file_ext}', 'error')
                 return redirect(url_for('oncampus_dashboard'))
             
-            # Required columns: Register Number, Student Name, Department
-            required_columns = ['Register Number', 'Student Name', 'Department']
-            missing_columns = [col for col in required_columns if col not in df.columns]
-            
-            if missing_columns:
-                flash(f"Missing required columns: {', '.join(missing_columns)}. Your file has: {', '.join(df.columns.tolist())}", 'error')
+            if data is None:
+                flash('Error reading file', 'error')
                 return redirect(url_for('oncampus_dashboard'))
             
-            students_data = df.to_dict('records')
+            # Required columns: Register Number, Student Name, Department
+            required_columns = ['Register Number', 'Student Name', 'Department']
+            if data:
+                available_cols = list(data[0].keys())
+                missing_columns = [col for col in required_columns if col not in available_cols]
+                
+                if missing_columns:
+                    flash(f"Missing required columns: {', '.join(missing_columns)}. Your file has: {', '.join(available_cols)}", 'error')
+                    return redirect(url_for('oncampus_dashboard'))
+            
+            students_data = data
             flash(f'✓ Successfully uploaded {len(students_data)} students.', 'success')
         except Exception as e:
             flash(f'Error processing file: {str(e)}', 'error')
