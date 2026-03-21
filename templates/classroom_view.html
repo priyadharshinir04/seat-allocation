@@ -294,7 +294,7 @@
                                                 <div class="benchmark-seat dept-{{ dtype }}">
                                                     <div class="seat-number">Seat {{ seat_num }}</div>
                                                     <div class="register-number">{{ s1.get('register_number', '') }}</div>
-                                                    <div class="dept-year">{{ s1.get('department', '') }}<br/>Year {{ s1.get('year', '') }}</div>
+                                                    <div class="dept-year">{{ s1.get('department', '') }}<br/>Year {{ s1.get('year', '') }}<br/><small>{{ s1.get('subject_code', 'N/A') }}</small></div>
                                                 </div>
                                             {% else %}
                                                 {% set seat_num = (bench.bench_number - 1) * 2 + 1 %}
@@ -312,7 +312,7 @@
                                                 <div class="benchmark-seat dept-{{ dtype }}">
                                                     <div class="seat-number">Seat {{ seat_num }}</div>
                                                     <div class="register-number">{{ s2.get('register_number', '') }}</div>
-                                                    <div class="dept-year">{{ s2.get('department', '') }}<br/>Year {{ s2.get('year', '') }}</div>
+                                                    <div class="dept-year">{{ s2.get('department', '') }}<br/>Year {{ s2.get('year', '') }}<br/><small>{{ s2.get('subject_code', 'N/A') }}</small></div>
                                                 </div>
                                             {% else %}
                                                 {% set seat_num = bench.bench_number * 2 %}
@@ -343,7 +343,7 @@
                                                 <div class="benchmark-seat dept-{{ dtype }}">
                                                     <div class="seat-number">Seat {{ seat_num }}</div>
                                                     <div class="register-number">{{ s1.get('register_number', '') }}</div>
-                                                    <div class="dept-year">{{ s1.get('department', '') }}<br/>Year {{ s1.get('year', '') }}</div>
+                                                    <div class="dept-year">{{ s1.get('department', '') }}<br/>Year {{ s1.get('year', '') }}<br/><small>{{ s1.get('subject_code', 'N/A') }}</small></div>
                                                 </div>
                                             {% else %}
                                                 {% set seat_num = (bench.bench_number - 1) * 2 + 1 %}
@@ -361,7 +361,7 @@
                                                 <div class="benchmark-seat dept-{{ dtype }}">
                                                     <div class="seat-number">Seat {{ seat_num }}</div>
                                                     <div class="register-number">{{ s2.get('register_number', '') }}</div>
-                                                    <div class="dept-year">{{ s2.get('department', '') }}<br/>Year {{ s2.get('year', '') }}</div>
+                                                    <div class="dept-year">{{ s2.get('department', '') }}<br/>Year {{ s2.get('year', '') }}<br/><small>{{ s2.get('subject_code', 'N/A') }}</small></div>
                                                 </div>
                                             {% else %}
                                                 {% set seat_num = bench.bench_number * 2 %}
@@ -392,7 +392,7 @@
                                                 <div class="benchmark-seat dept-{{ dtype }}">
                                                     <div class="seat-number">Seat {{ seat_num }}</div>
                                                     <div class="register-number">{{ s1.get('register_number', '') }}</div>
-                                                    <div class="dept-year">{{ s1.get('department', '') }}<br/>Year {{ s1.get('year', '') }}</div>
+                                                    <div class="dept-year">{{ s1.get('department', '') }}<br/>Year {{ s1.get('year', '') }}<br/><small>{{ s1.get('subject_code', 'N/A') }}</small></div>
                                                 </div>
                                             {% else %}
                                                 {% set seat_num = (bench.bench_number - 1) * 2 + 1 %}
@@ -410,7 +410,7 @@
                                                 <div class="benchmark-seat dept-{{ dtype }}">
                                                     <div class="seat-number">Seat {{ seat_num }}</div>
                                                     <div class="register-number">{{ s2.get('register_number', '') }}</div>
-                                                    <div class="dept-year">{{ s2.get('department', '') }}<br/>Year {{ s2.get('year', '') }}</div>
+                                                    <div class="dept-year">{{ s2.get('department', '') }}<br/>Year {{ s2.get('year', '') }}<br/><small>{{ s2.get('subject_code', 'N/A') }}</small></div>
                                                 </div>
                                             {% else %}
                                                 {% set seat_num = bench.bench_number * 2 %}
@@ -441,7 +441,7 @@
                                                 <div class="benchmark-seat dept-{{ dtype }}">
                                                     <div class="seat-number">Seat {{ seat_num }}</div>
                                                     <div class="register-number">{{ s1.get('register_number', '') }}</div>
-                                                    <div class="dept-year">{{ s1.get('department', '') }}<br/>Year {{ s1.get('year', '') }}</div>
+                                                    <div class="dept-year">{{ s1.get('department', '') }}<br/>Year {{ s1.get('year', '') }}<br/><small>{{ s1.get('subject_code', 'N/A') }}</small></div>
                                                 </div>
                                             {% else %}
                                                 {% set seat_num = (bench.bench_number - 1) * 2 + 1 %}
@@ -459,7 +459,7 @@
                                                 <div class="benchmark-seat dept-{{ dtype }}">
                                                     <div class="seat-number">Seat {{ seat_num }}</div>
                                                     <div class="register-number">{{ s2.get('register_number', '') }}</div>
-                                                    <div class="dept-year">{{ s2.get('department', '') }}<br/>Year {{ s2.get('year', '') }}</div>
+                                                    <div class="dept-year">{{ s2.get('department', '') }}<br/>Year {{ s2.get('year', '') }}<br/><small>{{ s2.get('subject_code', 'N/A') }}</small></div>
                                                 </div>
                                             {% else %}
                                                 {% set seat_num = bench.bench_number * 2 %}

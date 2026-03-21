@@ -72,6 +72,7 @@
                                 <th>Candidate Name</th>
                                 <th>Department</th>
                                 <th>Year</th>
+                                <th>Subject</th>
                                 <th>Room Number</th>
                                 <th>Bench/Seat</th>
                             </tr>
@@ -83,6 +84,7 @@
                                 <td>{{ res.candidate_name }}</td>
                                 <td>{{ res.department }}</td>
                                 <td><span class="badge bg-warning text-dark">Year {{ res.year }}</span></td>
+                                <td><span class="badge bg-secondary">{{ res.subject_code if res.subject_code else 'N/A' }}</span></td>
                                 <td><span class="badge bg-info text-dark">Room {{ res.room_number }}</span></td>
                                 <td>
                                     <span class="badge bg-success">
@@ -96,7 +98,7 @@
                             </tr>
                             {% else %}
                             <tr>
-                                <td colspan="5" class="text-center py-4">No allocation data found. Try uploading students and generating seating.</td>
+                                <td colspan="7" class="text-center py-4">No allocation data found. Try uploading students and generating seating.</td>
                             </tr>
                             {% endfor %}
                         </tbody>

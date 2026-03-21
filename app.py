@@ -1237,6 +1237,34 @@ def allocate_seats():
         flash(f'Allocation error: {error}', 'error')
         return redirect(url_for('candidate_upload'))
     
+    # Attach subject information to each allocated student
+    exam_schedules_from_session = session.get('exam_schedules', [])
+    schedules = exam_schedules_from_session if exam_schedules_from_session else exam_schedules
+    
+    for student in allocation_results:
+        student_year = student.get('year', '1')
+        student_dept = student.get('department', '')
+        
+        # Find matching exam schedule
+        subject_info = None
+        if schedules:
+            for schedule in schedules:
+                if str(schedule.get('year', '')) == str(student_year):
+                    dept = schedule.get('department', 'ALL')
+                    if dept == 'ALL' or dept == student_dept:
+                        subject_info = schedule
+                        break
+        
+        # Attach subject details
+        if subject_info:
+            student['subject_code'] = subject_info.get('subject_code', 'N/A')
+            student['subject_name'] = subject_info.get('subject_name', 'N/A')
+            student['exam_date'] = subject_info.get('exam_date', 'N/A')
+        else:
+            student['subject_code'] = 'N/A'
+            student['subject_name'] = 'N/A'
+            student['exam_date'] = 'N/A'
+    
     flash(f'✓ Automatic seat allocation completed for {len(allocation_results)} students!', 'success')
     
     return redirect(url_for('view_seating'))
@@ -1432,10 +1460,14 @@ def export_seating():
             columns = ['Register Number', 'Candidate Name', 'Department', 'Year']
             
             # Check what fields are available
+            if room_students and 'subject_code' in room_students[0]:
+                columns.append('Subject Code')
+            if room_students and 'subject_name' in room_students[0]:
+                columns.append('Subject Name')
             if room_students and 'bench_number' in room_students[0]:
-                columns.insert(3, 'Bench')
+                columns.append('Bench')
             if room_students and 'seat_position' in room_students[0]:
-                columns.insert(4, 'Position')
+                columns.append('Position')
             
             # Create sheet for room
             ws_room = wb.create_sheet(f'Room {room_no}')
@@ -1456,13 +1488,14 @@ def export_seating():
                     student.get('year', '')
                 ]
                 
+                if 'Subject Code' in columns:
+                    row_data.append(student.get('subject_code', 'N/A'))
+                if 'Subject Name' in columns:
+                    row_data.append(student.get('subject_name', 'N/A'))
                 if 'Bench' in columns:
-                    row_data.insert(3, student.get('bench_number', ''))
+                    row_data.append(student.get('bench_number', ''))
                 if 'Position' in columns:
-                    if 'Bench' in columns:
-                        row_data.insert(4, student.get('seat_position', ''))
-                    else:
-                        row_data.insert(3, student.get('seat_position', ''))
+                    row_data.append(student.get('seat_position', ''))
                 
                 ws_room.append(row_data)
             
@@ -1571,7 +1604,7 @@ def export_pdf():
             elements.append(Spacer(1, 0.08*inch))
             
             # Create table data
-            table_data = [['Bench/Seat #', 'Register Number', 'Department', 'Year']]
+            table_data = [['Bench/Seat #', 'Register Number', 'Department', 'Year', 'Subject Code']]
             
             # Sort by bench_number (safe access with fallback)
             for seat in sorted(room_data, key=lambda x: x.get('bench_number', x.get('bench_no', 0))):
@@ -1590,11 +1623,12 @@ def export_pdf():
                     bench_display,
                     str(seat['register_number']),
                     str(seat['department']),
-                    str(seat['year'])
+                    str(seat['year']),
+                    str(seat.get('subject_code', 'N/A'))
                 ])
             
             # Create table with better column widths
-            col_widths = [1.2*inch, 1.8*inch, 1.4*inch, 1.0*inch]
+            col_widths = [1.2*inch, 1.6*inch, 1.3*inch, 0.8*inch, 1.2*inch]
             table = Table(table_data, colWidths=col_widths)
             
             table.setStyle(TableStyle([
