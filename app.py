@@ -1639,7 +1639,7 @@ def export_pdf():
             buffer,
             mimetype='application/pdf',
             as_attachment=True,
-            download_name=filename
+            attachment_filename=filename
         )
     except Exception as e:
         flash(f'Error generating PDF: {str(e)}', 'error')
