@@ -1963,13 +1963,20 @@ def dashboard():
 
 @app.route('/oncampus-dashboard')
 def oncampus_dashboard():
+    # Get exam config from session (for display purposes)
+    config = session.get('exam_config', {})
+    
     stats = {
         'total_students': len(students_data),
-        'total_classrooms': 10,  # Placeholder
-        'total_seats': 450,       # Placeholder
+        'total_classrooms': config.get('num_classrooms', 10),
+        'total_seats': config.get('total_seats', 450),
         'allocated_seats': len(allocation_results)
     }
-    return render_template('oncampus_dashboard.html', stats=stats)
+    
+    return render_template('oncampus_dashboard.html', 
+                         stats=stats, 
+                         allocation_results=allocation_results,
+                         config=config)
 
 @app.route('/offcampus-dashboard')
 def offcampus_dashboard():

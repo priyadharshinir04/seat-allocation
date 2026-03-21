@@ -317,6 +317,65 @@
                 grid-template-columns: repeat(2, 1fr);
             }
         }
+
+        /* Seating Results Section Styles */
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .dashboard-row {
+            margin-top: 32px;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .btn-action-mini {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-action-mini:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .form-control {
+            border: 1px solid #e0e0e0;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .summary-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .stat-card {
+                padding: 16px;
+                border-left-width: 3px;
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -475,6 +534,125 @@
                 </div>
             </div>
         </div>
+
+        <!-- Seating Allocation Results Section -->
+        {% if allocation_results %}
+        <div class="dashboard-row">
+            <div class="full-width">
+                <div class="content-card">
+                    <h2><i class="fas fa-chair"></i> Seating Allocation Results</h2>
+                    
+                    <!-- Summary Stats for Results -->
+                    <div class="summary-stats" style="margin-bottom: 30px;">
+                        <div class="stat-card">
+                            <div class="stat-value">{{ allocation_results | length }}</div>
+                            <div class="stat-label">Total Students Allocated</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">{{ config.get('num_classrooms', 'N/A') }}</div>
+                            <div class="stat-label">Total Classrooms</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">{{ config.get('seats_per_classroom', 'N/A') }}</div>
+                            <div class="stat-label">Seats per Classroom</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">{{ config.get('total_seats', 'N/A') }}</div>
+                            <div class="stat-label">Total Capacity</div>
+                        </div>
+                    </div>
+
+                    <!-- Search & Filter Section -->
+                    <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
+                        <form method="GET" action="{{ url_for('view_seating') }}" style="display: flex; gap: 10px; flex: 1; min-width: 250px;">
+                            <input type="text" name="search" class="form-control" placeholder="Search by Register Number..." 
+                                   style="flex: 1;">
+                            <button type="submit" class="btn-primary" style="padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </form>
+                        
+                        <div style="display: flex; gap: 10px;">
+                            <a href="{{ url_for('classroom_grid') }}" class="btn-action-mini" 
+                               style="padding: 10px 15px; background: #667eea; color: white; border-radius: 6px; text-decoration: none; font-size: 14px; cursor: pointer;">
+                                <i class="fas fa-th"></i> Grid View
+                            </a>
+                            <a href="{{ url_for('export_seating') }}" class="btn-action-mini" 
+                               style="padding: 10px 15px; background: #28a745; color: white; border-radius: 6px; text-decoration: none; font-size: 14px; cursor: pointer;">
+                                <i class="fas fa-download"></i> Export Excel
+                            </a>
+                            <a href="{{ url_for('export_pdf') }}" class="btn-action-mini" 
+                               style="padding: 10px 15px; background: #FF6B6B; color: white; border-radius: 6px; text-decoration: none; font-size: 14px; cursor: pointer;">
+                                <i class="fas fa-file-pdf"></i> Export PDF
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Allocation Results Table -->
+                    <div style="overflow-x: auto; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                <tr>
+                                    <th style="padding: 12px; text-align: left; font-weight: 600;">Register Number</th>
+                                    <th style="padding: 12px; text-align: left; font-weight: 600;">Candidate Name</th>
+                                    <th style="padding: 12px; text-align: center; font-weight: 600;">Department</th>
+                                    <th style="padding: 12px; text-align: center; font-weight: 600;">Year</th>
+                                    <th style="padding: 12px; text-align: center; font-weight: 600;">Room</th>
+                                    <th style="padding: 12px; text-align: center; font-weight: 600;">Bench</th>
+                                    {% if config.get('exam_type') == 'internal' %}
+                                    <th style="padding: 12px; text-align: center; font-weight: 600;">Position</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for result in allocation_results | slice(0, 50) %}
+                                <tr style="border-bottom: 1px solid #e0e0e0; {% if loop.index0 % 2 == 0 %}background: #f9f9f9;{% endif %}">
+                                    <td style="padding: 12px; color: #667eea; font-weight: 600;">{{ result['register_number'] }}</td>
+                                    <td style="padding: 12px;">{{ result['candidate_name'] }}</td>
+                                    <td style="padding: 12px; text-align: center;">
+                                        <span style="background: #e8eeff; color: #667eea; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">
+                                            {{ result['department'] }}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: center;">
+                                        <span style="background: #fff3cd; color: #856404; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                                            Year {{ result['year'] }}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: center;">
+                                        <span style="background: #d4edff; color: #0066cc; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                                            Room {{ result['room_number'] }}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 12px; text-align: center;">
+                                        <span style="background: #e6f3ff; color: #004085; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                                            Bench {{ result['bench_number'] }}
+                                        </span>
+                                    </td>
+                                    {% if config.get('exam_type') == 'internal' %}
+                                    <td style="padding: 12px; text-align: center;">
+                                        <span style="background: #f0e6ff; color: #6c3fb5; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                                            {{ result.get('seat_position', 'N/A') }}
+                                        </span>
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Results Footer Info -->
+                    <div style="margin-top: 15px; padding: 15px; background: #f0f4ff; border-left: 4px solid #667eea; border-radius: 6px; font-size: 14px;">
+                        <strong style="color: #667eea;">ℹ️ Showing first 50 results</strong> - 
+                        <a href="{{ url_for('view_seating') }}" style="color: #667eea; text-decoration: none; font-weight: 600;">
+                            View all results →
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
     
     <script>
