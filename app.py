@@ -1594,7 +1594,7 @@ def export_pdf():
                 ])
             
             # Create table with better column widths
-            col_widths = [0.8*inch, 1.8*inch, 1.5*inch, 1.2*inch]
+            col_widths = [1.2*inch, 1.8*inch, 1.4*inch, 1.0*inch]
             table = Table(table_data, colWidths=col_widths)
             
             table.setStyle(TableStyle([
@@ -1605,22 +1605,23 @@ def export_pdf():
                 ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('FONTSIZE', (0, 0), (-1, 0), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-                ('TOPPADDING', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('TOPPADDING', (0, 0), (-1, 0), 12),
                 
                 # Data styling
-                ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
-                ('VALIGN', (0, 1), (-1, -1), 'MIDDLE'),
+                ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # First column center
+                ('ALIGN', (1, 1), (-1, -1), 'CENTER'),  # Rest columns center
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
                 ('FONTSIZE', (0, 1), (-1, -1), 9),
                 ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0f4ff')]),
                 
                 # Grid styling
                 ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#cccccc')),
-                ('TOPPADDING', (0, 1), (-1, -1), 8),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 8),
-                ('LEFTPADDING', (0, 0), (-1, -1), 6),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                ('TOPPADDING', (0, 1), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 10),
+                ('LEFTPADDING', (0, 0), (-1, -1), 8),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 8),
             ]))
             
             elements.append(table)
