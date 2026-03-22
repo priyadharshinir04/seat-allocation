@@ -162,29 +162,6 @@
             color: var(--gray-600);
         }
 
-        .logout-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            padding: 10px 20px;
-            background: var(--danger);
-            color: white;
-            border: none;
-            border-radius: var(--border-radius);
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .logout-btn:hover {
-            background: #c0392b;
-            transform: translateY(-2px);
-        }
-
         .admin-header {
             display: flex;
             align-items: center;
@@ -244,12 +221,7 @@
                 padding: 32px 20px;
             }
 
-            .logout-btn {
-                position: static;
-                width: 100%;
-                justify-content: center;
-                margin-bottom: 20px;
-            }
+
         }
     </style>
 </head>
@@ -265,9 +237,7 @@
                         <p>College Seating System</p>
                     </div>
                 </div>
-                <a href="{{ url_for('index') }}" class="logout-btn">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </a>
+
             </div>
 
             <!-- Campus Selection Header -->
