@@ -1219,7 +1219,7 @@ def exam_schedule_upload():
             session.modified = True
             
             flash(f'✓ Exam schedule uploaded successfully! {len(exam_schedules)} subjects imported', 'success')
-            return redirect(url_for('exam_schedule_upload'))
+            return redirect(url_for('oncampus_dashboard'))
         
         except Exception as e:
             flash(f'Error processing file: {str(e)}', 'error')
