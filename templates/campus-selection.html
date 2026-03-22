@@ -203,6 +203,28 @@
             margin: 0;
         }
 
+        .back-to-role-btn {
+            padding: 10px 24px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+        }
+
+        .back-to-role-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
         @media (max-width: 768px) {
             .campus-grid {
                 grid-template-columns: 1fr;
@@ -237,7 +259,9 @@
                         <p>College Seating System</p>
                     </div>
                 </div>
-
+                <a href="{{ url_for('index') }}" class="back-to-role-btn">
+                    <i class="fas fa-arrow-left"></i> Back to Role Selection
+                </a>
             </div>
 
             <!-- Campus Selection Header -->
