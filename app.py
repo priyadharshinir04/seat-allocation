@@ -1393,6 +1393,7 @@ def classroom_grid():
         # Calculate room statistics
         all_depts = set()
         all_years = set()
+        all_subjects = set()
         total_students = 0
         
         for bench in benches:
@@ -1400,10 +1401,16 @@ def classroom_grid():
                 total_students += 1
                 all_depts.add(bench['left_student'].get('department', 'N/A'))
                 all_years.add(bench['left_student'].get('year', 'N/A'))
+                subject_name = bench['left_student'].get('subject_name', 'N/A')
+                if subject_name != 'N/A':
+                    all_subjects.add(subject_name)
             if bench['right_student']:
                 total_students += 1
                 all_depts.add(bench['right_student'].get('department', 'N/A'))
                 all_years.add(bench['right_student'].get('year', 'N/A'))
+                subject_name = bench['right_student'].get('subject_name', 'N/A')
+                if subject_name != 'N/A':
+                    all_subjects.add(subject_name)
         
         # Build room object with benches and metadata
         rooms_with_benches[room_num] = {
@@ -1412,6 +1419,7 @@ def classroom_grid():
             'empty_count': 40 - total_students,
             'departments': sorted(list(all_depts)),
             'years': sorted(list(all_years)),
+            'subjects': sorted(list(all_subjects)),
             'benches': benches
         }
     
