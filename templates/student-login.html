@@ -237,7 +237,18 @@
     </style>
 </head>
 <body>
-    <div class="login-page">
+    <!-- Back Navigation -->
+    <div class="login-navbar" style="position: fixed; top: 0; left: 0; right: 0; padding: 16px 24px; background: var(--white); border-bottom: 1px solid var(--gray-200); z-index: 999; display: flex; justify-content: space-between; align-items: center;">
+        <a href="{{ url_for('index') }}" style="display: inline-flex; align-items: center; gap: 8px; color: var(--gray-700); text-decoration: none; font-weight: 500; font-size: 0.9rem; transition: var(--transition);">
+            <i class="fas fa-arrow-left"></i> Back to Home
+        </a>
+        {% if session.get('student_logged_in') %}
+        <a href="{{ url_for('student_logout') }}" style="display: inline-flex; align-items: center; gap: 8px; color: #e74c3c; text-decoration: none; font-weight: 500; font-size: 0.9rem; transition: var(--transition);">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+        {% endif %}
+    </div>
+    <div class="login-page" style="padding-top: 60px;">
         <div class="login-card">
             <div class="login-header">
                 <div class="login-icon">

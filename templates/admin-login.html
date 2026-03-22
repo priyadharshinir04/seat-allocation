@@ -166,9 +166,16 @@
 <body>
     <!-- Back Navigation -->
     <div class="login-navbar">
-        <a href="{{ url_for('index') }}">
-            <i class="fas fa-arrow-left"></i> Back to Home
-        </a>
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <a href="{{ url_for('index') }}">
+                <i class="fas fa-arrow-left"></i> Back to Home
+            </a>
+            {% if session.get('admin_logged_in') %}
+            <a href="{{ url_for('admin_logout') }}" style="color: #e74c3c;">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+            {% endif %}
+        </div>
     </div>
     <div class="login-page" id="login-page">
         <div class="login-card" id="login-card">
