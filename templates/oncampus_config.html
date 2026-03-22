@@ -142,9 +142,12 @@
 </head>
 <body>
     <div class="config-container">
-        <div style="margin-bottom: 20px;">
+        <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
             <a href="{{ url_for('campus_selection') }}" style="color: #667eea; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
                 <i class="fas fa-arrow-left"></i> Back to Campus Selection
+            </a>
+            <a href="{{ url_for('admin_logout') }}" style="color: #f44336; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fas fa-sign-out-alt"></i> Logout
             </a>
         </div>
         

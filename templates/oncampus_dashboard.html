@@ -279,6 +279,23 @@
             border-left: 3px solid #10b981;
             font-size: 0.82rem;
             text-align: center;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .workflow-step.completed {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.05));
+            border-left-color: #10b981;
+        }
+
+        .workflow-step.pending {
+            background: linear-gradient(135deg, rgba(156, 163, 175, 0.08), rgba(156, 163, 175, 0.05));
+            border-left-color: #9ca3af;
+        }
+
+        .workflow-step:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
         }
 
         .workflow-step-num {
@@ -294,9 +311,48 @@
             margin-bottom: 4px;
         }
 
+        .workflow-step.completed .workflow-step-num {
+            background: #10b981;
+        }
+
+        .workflow-step.pending .workflow-step-num {
+            background: #9ca3af;
+        }
+
         .workflow-step-text {
             font-weight: 600;
-            color: #059669;        }
+            color: #059669;
+        }
+
+        .workflow-step.pending .workflow-step-text {
+            color: #6b7280;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .status-badge.completed {
+            background: rgba(16, 185, 129, 0.2);
+            color: #059669;
+        }
+
+        .status-badge.pending {
+            background: rgba(156, 163, 175, 0.2);
+            color: #6b7280;
+        }
+
+        .status-badge-icon {
+            display: inline-block;
+            margin-right: 4px;
+        }
 
         @media (max-width: 768px) {
             .dashboard-header {
@@ -390,6 +446,9 @@
                 <a href="{{ url_for('oncampus_config') }}" class="btn btn-secondary">
                     <i class="fas fa-arrow-left"></i> Back
                 </a>
+                <a href="{{ url_for('admin_logout') }}" class="btn btn-secondary" style="background: #f44336; color: white;">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
             </div>
         </div>
 
@@ -429,21 +488,57 @@
                         <h3><i class="fas fa-info-circle"></i> On-Campus Exam Configuration</h3>
                         <p>View and manage seating allocation for on-campus internal examinations. All students are automatically assigned to reserved classrooms based on department and year.</p>
                         <div class="workflow-steps">
-                            <div class="workflow-step">
+                            <div class="workflow-step {% if session_status.config_completed %}completed{% else %}pending{% endif %}">
                                 <div class="workflow-step-num">1</div>
                                 <div class="workflow-step-text">Config</div>
+                                {% if session_status.config_completed %}
+                                <div class="status-badge completed">
+                                    <span class="status-badge-icon">✓</span>Done
+                                </div>
+                                {% else %}
+                                <div class="status-badge pending">
+                                    <span class="status-badge-icon">○</span>Pending
+                                </div>
+                                {% endif %}
                             </div>
-                            <div class="workflow-step">
+                            <div class="workflow-step {% if session_status.exam_schedule_uploaded %}completed{% else %}pending{% endif %}">
                                 <div class="workflow-step-num">2</div>
                                 <div class="workflow-step-text">Exam Schedule</div>
+                                {% if session_status.exam_schedule_uploaded %}
+                                <div class="status-badge completed">
+                                    <span class="status-badge-icon">✓</span>{{ session_status.exam_schedule_count }}
+                                </div>
+                                {% else %}
+                                <div class="status-badge pending">
+                                    <span class="status-badge-icon">○</span>Pending
+                                </div>
+                                {% endif %}
                             </div>
-                            <div class="workflow-step">
+                            <div class="workflow-step {% if session_status.students_uploaded %}completed{% else %}pending{% endif %}">
                                 <div class="workflow-step-num">3</div>
                                 <div class="workflow-step-text">Upload Students</div>
+                                {% if session_status.students_uploaded %}
+                                <div class="status-badge completed">
+                                    <span class="status-badge-icon">✓</span>{{ session_status.students_count }}
+                                </div>
+                                {% else %}
+                                <div class="status-badge pending">
+                                    <span class="status-badge-icon">○</span>Pending
+                                </div>
+                                {% endif %}
                             </div>
-                            <div class="workflow-step">
+                            <div class="workflow-step {% if session_status.allocation_completed %}completed{% else %}pending{% endif %}">
                                 <div class="workflow-step-num">4</div>
                                 <div class="workflow-step-text">Allocate</div>
+                                {% if session_status.allocation_completed %}
+                                <div class="status-badge completed">
+                                    <span class="status-badge-icon">✓</span>{{ session_status.allocation_count }}
+                                </div>
+                                {% else %}
+                                <div class="status-badge pending">
+                                    <span class="status-badge-icon">○</span>Pending
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>

@@ -240,7 +240,10 @@ def send_bulk_sms_notifications():
     - Clean separation of failed vs skipped counts
     """
     try:
-        if not allocation_results:
+        # Get allocation results from session or global
+        alloc_results = session.get('allocation_results') or allocation_results
+        
+        if not alloc_results:
             logger.warning("⚠️  No students allocated for SMS sending")
             return {
                 "status": "error",
@@ -261,7 +264,7 @@ def send_bulk_sms_notifications():
         logger.info("="*70)
         logger.info(f"📅 Exam Mode: {exam_mode}")
         logger.info(f"⏰ Exam Time: {exam_time}")
-        logger.info(f"👥 Total Students: {len(allocation_results)}")
+        logger.info(f"👥 Total Students: {len(alloc_results)}")
         logger.info(f"✅ Verified Recipients: {len(VERIFIED_TEST_NUMBERS)}")
         logger.info(f"🔐 Verified Numbers: {', '.join(VERIFIED_TEST_NUMBERS)}")
         if SMS_DEMO_MODE:
@@ -276,7 +279,7 @@ def send_bulk_sms_notifications():
         errors = []
         skipped_details = []
         
-        for idx, student in enumerate(allocation_results):
+        for idx, student in enumerate(alloc_results):
             phone_number = student.get('phone_number', '').strip()
             student_name = student.get('candidate_name', 'Student')
             subject_name = student.get('subject_name', 'Unknown Subject')
@@ -334,7 +337,7 @@ def send_bulk_sms_notifications():
                 "success_count": success_count,
                 "failed_count": failed_count,
                 "skipped_count": skipped_count,
-                "total": len(allocation_results),
+                "total": len(alloc_results),
                 "message": f"✅ {success_count} sent | ❌ {failed_count} failed | ⏭️  {skipped_count} skipped",
                 "errors": errors[:5],
                 "skipped_details": skipped_details[:10],
@@ -350,7 +353,7 @@ def send_bulk_sms_notifications():
         logger.info(f"✅ Successfully Simulated/Sent:  {success_count}")
         logger.info(f"❌ Failed:                       {failed_count}")
         logger.info(f"⏭️  Skipped Total:               {skipped_count}")
-        logger.info(f"📋 Total Processed:              {len(allocation_results)}")
+        logger.info(f"📋 Total Processed:              {len(alloc_results)}")
         logger.info("="*70 + "\n")
         
         return result
@@ -1030,6 +1033,17 @@ def admin_login():
 def campus_selection():
     return render_template('campus-selection.html')
 
+@app.route('/admin-logout')
+def admin_logout():
+    """Admin Logout - Clear all admin session data"""
+    # Clear admin-related session keys only
+    admin_keys = ['exam_config', 'students_count', 'exam_schedule_count', 'students_data', 'allocation_results', 'exam_schedules']
+    for key in admin_keys:
+        session.pop(key, None)
+    session.modified = True
+    flash('You have been logged out successfully!', 'success')
+    return redirect(url_for('admin_login'))
+
 @app.route('/oncampus-config', methods=['GET', 'POST'])
 def oncampus_config():
     """ON-CAMPUS CONFIGURATION PAGE - Step 1"""
@@ -1119,9 +1133,12 @@ def candidate_upload():
             
             students_data = cleaned_data
             
-            flash(f'✓ Successfully uploaded {len(cleaned_data)} valid candidates!', 'success')
+            # Store in session for persistence across dashboard navigation
+            session['students_data'] = cleaned_data
             session['students_count'] = len(cleaned_data)
             session.modified = True
+            
+            flash(f'✓ Successfully uploaded {len(cleaned_data)} valid candidates!', 'success')
             
             return redirect(url_for('allocate_seats'))
         
@@ -1196,13 +1213,13 @@ def exam_schedule_upload():
                 }
                 exam_schedules.append(schedule_entry)
             
-            # Store in session for persistence
+            # Store in session for persistence across dashboard navigation
             session['exam_schedules'] = exam_schedules
+            session['exam_schedule_count'] = len(exam_schedules)
             session.modified = True
             
             flash(f'✓ Exam schedule uploaded successfully! {len(exam_schedules)} subjects imported', 'success')
-            session['exam_schedule_count'] = len(exam_schedules)
-            return redirect(url_for('candidate_upload'))
+            return redirect(url_for('exam_schedule_upload'))
         
         except Exception as e:
             flash(f'Error processing file: {str(e)}', 'error')
@@ -1218,8 +1235,11 @@ def allocate_seats():
         flash('Please configure exam details first!', 'error')
         return redirect(url_for('oncampus_config'))
     
+    # Get students from session (persistent) or global variable
+    students_to_allocate = session.get('students_data') or students_data
+    
     # Check if students_data is empty
-    if not students_data:
+    if not students_to_allocate:
         flash('Please upload candidate data first!', 'error')
         return redirect(url_for('candidate_upload'))
     
@@ -1229,7 +1249,7 @@ def allocate_seats():
     allocation_results, error = perform_seat_allocation(
         config['num_classrooms'],
         config['seats_per_classroom'],
-        students_data,
+        students_to_allocate,
         config.get('exam_type', 'semester')
     )
     
@@ -1265,6 +1285,10 @@ def allocate_seats():
             student['subject_name'] = 'N/A'
             student['exam_date'] = 'N/A'
     
+    # Store allocation results in session for persistence
+    session['allocation_results'] = allocation_results
+    session.modified = True
+    
     flash(f'✓ Automatic seat allocation completed for {len(allocation_results)} students!', 'success')
     
     return redirect(url_for('view_seating'))
@@ -1274,39 +1298,45 @@ def view_seating():
     """SEATING DISPLAY PAGE - Step 4"""
     config = session.get('exam_config', {})
     
-    if not allocation_results:
+    # Get allocation results from session (persistent) or global variable
+    alloc_results = session.get('allocation_results') or allocation_results
+    
+    if not alloc_results:
         flash('No allocation data available. Please perform seat allocation first!', 'error')
         return redirect(url_for('oncampus_config'))
     
     # Handle search
     search_query = request.args.get('search', '').strip()
-    results = allocation_results
+    results = alloc_results
     
     if search_query:
-        results = [r for r in allocation_results 
+        results = [r for r in alloc_results 
                   if str(r['register_number']).lower() == search_query.lower()]
     
     return render_template('seating.html', 
                          results=results, 
                          search_query=search_query,
                          config=config,
-                         total_count=len(allocation_results))
+                         total_count=len(alloc_results))
 
 @app.route('/classroom-grid')
 def classroom_grid():
     """CLASSROOM GRID VISUALIZATION - Professional Bench Layout"""
     config = session.get('exam_config', {})
     
-    if not allocation_results:
+    # Get allocation results from session (persistent) or global variable
+    alloc_results = session.get('allocation_results') or allocation_results
+    
+    if not alloc_results:
         flash('No allocation data available!', 'error')
         return redirect(url_for('oncampus_config'))
     
     # Get search filter if provided
     search_query = request.args.get('search', '').strip()
-    results = allocation_results
+    results = alloc_results
     
     if search_query:
-        results = [r for r in allocation_results 
+        results = [r for r in alloc_results 
                   if str(r.get('register_number', '')).lower() == search_query.lower() or
                      str(r.get('candidate_name', '')).lower().find(search_query.lower()) != -1]
     
@@ -1396,7 +1426,10 @@ def search_student_api():
     """API endpoint for student search"""
     reg_num = request.args.get('reg_num', '').strip()
     
-    for res in allocation_results:
+    # Get allocation results from session or global
+    alloc_results = session.get('allocation_results') or allocation_results
+    
+    for res in alloc_results:
         if str(res['register_number']).lower() == reg_num.lower():
             return jsonify(res)
     
@@ -1997,20 +2030,34 @@ def dashboard():
 
 @app.route('/oncampus-dashboard')
 def oncampus_dashboard():
-    # Get exam config from session (for display purposes)
+    # Get exam config and data from session (persistent)
     config = session.get('exam_config', {})
+    students_from_session = session.get('students_data') or students_data
+    allocation_from_session = session.get('allocation_results') or allocation_results
     
     stats = {
-        'total_students': len(students_data),
+        'total_students': len(students_from_session),
         'total_classrooms': config.get('num_classrooms', 10),
         'total_seats': config.get('total_seats', 450),
-        'allocated_seats': len(allocation_results)
+        'allocated_seats': len(allocation_from_session)
+    }
+    
+    # Calculate session status indicators
+    session_status = {
+        'config_completed': bool(config),
+        'students_uploaded': len(students_from_session) > 0,
+        'students_count': len(students_from_session),
+        'exam_schedule_uploaded': len(session.get('exam_schedules', [])) > 0,
+        'exam_schedule_count': len(session.get('exam_schedules', [])),
+        'allocation_completed': len(allocation_from_session) > 0,
+        'allocation_count': len(allocation_from_session)
     }
     
     return render_template('oncampus_dashboard.html', 
                          stats=stats, 
-                         allocation_results=allocation_results,
-                         config=config)
+                         allocation_results=allocation_from_session,
+                         config=config,
+                         session_status=session_status)
 
 @app.route('/offcampus-dashboard')
 def offcampus_dashboard():
@@ -2066,6 +2113,11 @@ def upload_students():
                     return redirect(url_for('oncampus_dashboard'))
             
             students_data = data
+            
+            # Store in session for persistence across dashboard navigation
+            session['students_data'] = data
+            session.modified = True
+            
             flash(f'✓ Successfully uploaded {len(students_data)} students.', 'success')
         except Exception as e:
             flash(f'Error processing file: {str(e)}', 'error')
@@ -2078,7 +2130,11 @@ def upload_students():
 @app.route('/generate-seating')
 def generate_seating():
     global students_data, allocation_results
-    if not students_data:
+    
+    # Get students from session (persistent) or global variable
+    students_to_allocate = session.get('students_data') or students_data
+    
+    if not students_to_allocate:
         flash('No student data available to allocate.', 'error')
         return redirect(url_for('oncampus_dashboard'))
     
@@ -2089,7 +2145,7 @@ def generate_seating():
     
     # Group students by department
     departments = {}
-    for student in students_data:
+    for student in students_to_allocate:
         dept = student.get('Department', 'Unknown')
         if dept not in departments:
             departments[dept] = []
@@ -2190,6 +2246,10 @@ def generate_seating():
         classroom_index += 1
     
     if allocation_results:
+        # Store allocation results in session for persistence
+        session['allocation_results'] = allocation_results
+        session.modified = True
+        
         flash(f'✓ Successfully generated smart seating for {len(allocation_results)} students! ({len(dept_pairs)} department pairs)', 'success')
     else:
         flash('Could not generate seating arrangement.', 'error')
@@ -2198,26 +2258,32 @@ def generate_seating():
 
 @app.route('/view-results')
 def view_results():
+    # Get allocation results from session or global
+    alloc_results = session.get('allocation_results') or allocation_results
+    
     search_query = request.args.get('search', '').strip()
-    results = allocation_results
+    results = alloc_results
     
     if search_query:
-        results = [r for r in allocation_results if str(r['register_number']) == search_query]
+        results = [r for r in alloc_results if str(r['register_number']) == search_query]
         
     return render_template('view_results.html', results=results, search_query=search_query)
 
 @app.route('/classroom-visualization')
 def classroom_visualization():
     """Display results in realistic classroom layout"""
-    if not allocation_results:
+    # Get allocation results from session or global
+    alloc_results = session.get('allocation_results') or allocation_results
+    
+    if not alloc_results:
         flash('No allocation data available!', 'error')
         return redirect(url_for('oncampus_dashboard'))
     
     search_query = request.args.get('search', '').strip()
-    results = allocation_results
+    results = alloc_results
     
     if search_query:
-        results = [r for r in allocation_results 
+        results = [r for r in alloc_results 
                   if str(r.get('register_number', '')).lower() == search_query.lower() or
                      str(r.get('student_name', '')).lower().find(search_query.lower()) != -1]
     
@@ -2225,8 +2291,11 @@ def classroom_visualization():
 
 @app.route('/search-student')
 def search_student():
+    # Get allocation results from session or global
+    alloc_results = session.get('allocation_results') or allocation_results
+    
     reg_num = request.args.get('reg_num', '').strip()
-    for res in allocation_results:
+    for res in alloc_results:
         if str(res['register_number']) == reg_num:
             return jsonify(res)
     return jsonify({'error': 'Student not found'}), 404
@@ -2241,7 +2310,10 @@ def send_sms_notifications_route():
     try:
         config = session.get('exam_config', {})
         
-        if not allocation_results:
+        # Get allocation results from session or global
+        alloc_results = session.get('allocation_results') or allocation_results
+        
+        if not alloc_results:
             logger.warning("SMS request: No allocations found")
             return jsonify({
                 "status": "error",
