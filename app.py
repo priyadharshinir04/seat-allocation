@@ -2124,15 +2124,27 @@ def upload_students():
                 flash('Error reading file', 'error')
                 return redirect(url_for('oncampus_dashboard'))
             
-            # Required columns: Register Number, Student Name, Department
-            required_columns = ['Register Number', 'Student Name', 'Department']
+            # Required columns: Register Number, (Name or Student Name), Department
+            # Accept both "Name" and "Student Name" for student name column
+            required_columns = ['Register Number', 'Department']
             if data:
                 available_cols = list(data[0].keys())
                 missing_columns = [col for col in required_columns if col not in available_cols]
                 
+                # Check for at least one of the name column variants
+                has_name_column = 'Name' in available_cols or 'Student Name' in available_cols
+                if not has_name_column:
+                    missing_columns.append("Name or Student Name")
+                
                 if missing_columns:
                     flash(f"Missing required columns: {', '.join(missing_columns)}. Your file has: {', '.join(available_cols)}", 'error')
                     return redirect(url_for('oncampus_dashboard'))
+                
+                # Normalize column names if needed (rename "Name" to "Student Name" for consistency)
+                if 'Name' in available_cols and 'Student Name' not in available_cols:
+                    for row in data:
+                        if 'Name' in row:
+                            row['Student Name'] = row.pop('Name')
             
             students_data = data
             
