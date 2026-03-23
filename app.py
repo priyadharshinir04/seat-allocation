@@ -1037,7 +1037,7 @@ def campus_selection():
 def admin_logout():
     """Admin Logout - Clear all admin session data"""
     # Clear admin-related session keys only
-    admin_keys = ['exam_config', 'students_count', 'exam_schedule_count', 'students_data', 'allocation_results', 'exam_schedules', 'student_upload_done', 'student_upload_count']
+    admin_keys = ['exam_config', 'students_count', 'exam_schedule_count', 'students_data', 'allocation_results', 'exam_schedules']
     for key in admin_keys:
         session.pop(key, None)
     session.modified = True
@@ -2047,7 +2047,10 @@ def dashboard():
 def oncampus_dashboard():
     # Get exam config and data from session (persistent)
     config = session.get('exam_config', {})
-    students_from_session = session.get('students_data') or students_data
+    students_from_session = session.get('students_data')
+    if students_from_session is None:
+        students_from_session = students_data
+    
     allocation_from_session = session.get('allocation_results') or allocation_results
     
     stats = {
@@ -2058,14 +2061,14 @@ def oncampus_dashboard():
     }
     
     # Calculate session status indicators
-    # Prefer explicit flags if they exist (set during upload), otherwise calculate from data
-    student_upload_done = session.get('student_upload_done', False)
-    student_upload_count = session.get('student_upload_count', len(students_from_session))
+    # Use actual data presence as source of truth
+    students_count = len(students_from_session)
+    students_uploaded = students_count > 0
     
     session_status = {
         'config_completed': bool(config),
-        'students_uploaded': student_upload_done or len(students_from_session) > 0,
-        'students_count': student_upload_count,
+        'students_uploaded': students_uploaded,
+        'students_count': students_count,
         'exam_schedule_uploaded': len(session.get('exam_schedules', [])) > 0,
         'exam_schedule_count': len(session.get('exam_schedules', [])),
         'allocation_completed': len(allocation_from_session) > 0,
@@ -2135,10 +2138,6 @@ def upload_students():
             
             # Store in session for persistence across dashboard navigation
             session['students_data'] = data
-            
-            # Set explicit flags for admin dashboard progress tracking
-            session['student_upload_done'] = True
-            session['student_upload_count'] = len(data)
             session.modified = True
             
             flash(f'✓ Successfully uploaded {len(students_data)} students.', 'success')
