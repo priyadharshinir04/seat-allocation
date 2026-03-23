@@ -1041,7 +1041,11 @@ def campus_selection():
 def admin_logout():
     """Admin Logout - Clear all admin session data"""
     # Clear admin-related session keys only
-    admin_keys = ['exam_config', 'students_count', 'exam_schedule_count', 'students_data', 'allocation_results', 'exam_schedules']
+    admin_keys = [
+        'exam_config', 'students_count', 'exam_schedule_count', 'students_data', 
+        'allocation_results', 'exam_schedules', 'student_count', 'allocation_count',
+        'step_config_done', 'step_exam_schedule_done', 'step_student_upload_done', 'step_allocation_done'
+    ]
     for key in admin_keys:
         session.pop(key, None)
     session.modified = True
@@ -1081,6 +1085,8 @@ def oncampus_config():
                 'seats_per_classroom': seats_per_classroom,
                 'total_seats': num_classrooms * seats_per_classroom
             }
+            # Mark configuration step as complete
+            session['step_config_done'] = True
             session.modified = True
             
             exam_mode = 'Internal Exam (40 per classroom)' if exam_type == 'internal' else 'Semester Exam (20 per classroom)'
@@ -1226,6 +1232,8 @@ def exam_schedule_upload():
             # Store in session for persistence across dashboard navigation
             session['exam_schedules'] = exam_schedules
             session['exam_schedule_count'] = len(exam_schedules)
+            # Mark exam schedule upload step as complete
+            session['step_exam_schedule_done'] = True
             session.modified = True
             
             flash(f'✓ Exam schedule uploaded successfully! {len(exam_schedules)} subjects imported', 'success')
@@ -1297,6 +1305,9 @@ def allocate_seats():
     
     # Store allocation results in session for persistence
     session['allocation_results'] = allocation_results
+    # Mark allocation step as complete and store count
+    session['step_allocation_done'] = True
+    session['allocation_count'] = len(allocation_results)
     session.modified = True
     
     flash(f'✓ Automatic seat allocation completed for {len(allocation_results)} students!', 'success')
@@ -2082,18 +2093,20 @@ def oncampus_dashboard():
     }
     
     # Calculate session status indicators
-    # Use actual data presence as source of truth
-    students_count = len(students_from_session)
-    students_uploaded = students_count > 0
-    
+    # Track each step independently using persistent flags
+    # These flags are set when each step is completed and persist across navigation
     session_status = {
-        'config_completed': bool(config),
-        'students_uploaded': students_uploaded,
-        'students_count': students_count,
-        'exam_schedule_uploaded': len(session.get('exam_schedules', [])) > 0,
-        'exam_schedule_count': len(session.get('exam_schedules', [])),
-        'allocation_completed': len(allocation_from_session) > 0,
-        'allocation_count': len(allocation_from_session)
+        'config_completed': session.get('step_config_done', False) or bool(config),
+        'config_count': 1 if session.get('step_config_done', False) or bool(config) else 0,
+        
+        'exam_schedule_uploaded': session.get('step_exam_schedule_done', False) or len(session.get('exam_schedules', [])) > 0,
+        'exam_schedule_count': session.get('exam_schedule_count', len(session.get('exam_schedules', []))),
+        
+        'students_uploaded': session.get('step_student_upload_done', False) or len(students_from_session) > 0,
+        'students_count': session.get('student_count', len(students_from_session)),
+        
+        'allocation_completed': session.get('step_allocation_done', False) or len(allocation_from_session) > 0,
+        'allocation_count': session.get('allocation_count', len(allocation_from_session))
     }
     
     return render_template('oncampus_dashboard.html', 
@@ -2174,6 +2187,9 @@ def upload_students():
             
             # Store in session for persistence across dashboard navigation
             session['students_data'] = data
+            # Mark student upload step as complete and store count
+            session['step_student_upload_done'] = True
+            session['student_count'] = len(data)
             session.modified = True
             
             flash(f'✓ Successfully uploaded {len(students_data)} students.', 'success')
@@ -2306,6 +2322,9 @@ def generate_seating():
     if allocation_results:
         # Store allocation results in session for persistence
         session['allocation_results'] = allocation_results
+        # Mark allocation step as complete and store count
+        session['step_allocation_done'] = True
+        session['allocation_count'] = len(allocation_results)
         session.modified = True
         
         flash(f'✓ Successfully generated smart seating for {len(allocation_results)} students! ({len(dept_pairs)} department pairs)', 'success')
