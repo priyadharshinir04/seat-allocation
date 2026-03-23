@@ -20,6 +20,10 @@ ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+# Configure session to persist data across page reloads and navigation
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
+app.config['SESSION_REFRESH_EACH_REQUEST'] = True
+
 # Setup logging for SMS notifications
 # Use /tmp for Render (ephemeral storage) or local logs for local dev
 import tempfile
@@ -1047,6 +1051,9 @@ def admin_logout():
 @app.route('/oncampus-config', methods=['GET', 'POST'])
 def oncampus_config():
     """ON-CAMPUS CONFIGURATION PAGE - Step 1"""
+    # Enable permanent session for this interaction
+    session.permanent = True
+    
     if request.method == 'POST':
         try:
             college_name = request.form.get('college_name', '').strip()
@@ -1151,6 +1158,9 @@ def candidate_upload():
 @app.route('/exam-schedule-upload', methods=['GET', 'POST'])
 def exam_schedule_upload():
     """EXAM SCHEDULE UPLOAD - Step 2B"""
+    # Enable permanent session for this interaction
+    session.permanent = True
+    
     config = session.get('exam_config', {})
     if not config:
         flash('Please configure exam details first!', 'error')
@@ -2045,6 +2055,9 @@ def dashboard():
 
 @app.route('/oncampus-dashboard')
 def oncampus_dashboard():
+    # Enable permanent session for this interaction
+    session.permanent = True
+    
     # Get exam config and data from session (persistent)
     config = session.get('exam_config', {})
     students_from_session = session.get('students_data')
@@ -2094,6 +2107,9 @@ def offcampus_dashboard():
 @app.route('/upload-students', methods=['POST'])
 def upload_students():
     global students_data
+    # Enable permanent session for this interaction
+    session.permanent = True
+    
     if 'file' not in request.files:
         flash('No file part', 'error')
         return redirect(url_for('oncampus_dashboard'))
