@@ -1736,6 +1736,11 @@ def export_pdf():
 @app.route('/student-login', methods=['GET', 'POST'])
 def student_login():
     """Student Login Page - Authenticate using Register Number and Year/DOB"""
+    # Clear any admin-related flash messages before showing student login
+    # to prevent admin notifications from showing in student portal
+    if request.method == 'GET':
+        session.pop('_flashes', None)
+    
     if request.method == 'POST':
         reg_num = request.form.get('register_number', '').strip().upper()
         year_or_dob = request.form.get('year_or_dob', '').strip()
@@ -1767,6 +1772,9 @@ def student_login():
 @app.route('/student-dashboard')
 def student_dashboard():
     """Student Dashboard - Display seating details and exam schedule"""
+    # Clear any admin-related flash messages from the session
+    session.pop('_flashes', None)
+    
     if not session.get('student_logged_in'):
         flash('Please login first!', 'error')
         return redirect(url_for('student_login'))
