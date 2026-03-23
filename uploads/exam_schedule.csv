@@ -1,14 +1,15 @@
 Year,Department,Subject Code,Subject Name,Exam Date,Exam Time
-1,ALL,MA1101,Engineering Mathematics,20-03-2026,10:00 AM - 1:00 PM
-2,CSE,CS2201,Data Structures,20-03-2026,10:00 AM - 1:00 PM
-2,AIDS,AD2201,Machine Learning Basics,20-03-2026,10:00 AM - 1:00 PM
-2,AIML,ML2201,Introduction to AI,20-03-2026,10:00 AM - 1:00 PM
-2,EEE,EE2201,Circuit Theory,20-03-2026,10:00 AM - 1:00 PM
-3,CSE,CS3301,Database Management Systems,20-03-2026,10:00 AM - 1:00 PM
-3,AIDS,AD3301,Deep Learning,20-03-2026,10:00 AM - 1:00 PM
-3,AIML,ML3301,Neural Networks,20-03-2026,10:00 AM - 1:00 PM
-3,EEE,EE3301,Power Systems,20-03-2026,10:00 AM - 1:00 PM
-4,CSE,CS4401,Software Engineering,20-03-2026,10:00 AM - 1:00 PM
-4,AIDS,AD4401,Advanced AI,20-03-2026,10:00 AM - 1:00 PM
-4,AIML,ML4401,Advanced Machine Learning,20-03-2026,10:00 AM - 1:00 PM
-4,EEE,EE4401,Smart Grid Systems,20-03-2026,10:00 AM - 1:00 PM
+1,ALL,MA1101,Engineering Mathematics,23-03-2026,10:00 AM - 1:00 PM
+2,CSE,CS2201,Data Structures,23-03-2026,10:00 AM - 1:00 PM
+2,AIDS,ML2201,Machine Learning Basics,23-03-2026,10:00 AM - 1:00 PM
+2,AIML,AI2201,Introduction to AI,23-03-2026,10:00 AM - 1:00 PM
+2,EEE,EE2201,Circuit Theory,23-03-2026,10:00 AM - 1:00 PM
+3,CSE,CS3301,Database Management Systems,23-03-2026,10:00 AM - 1:00 PM
+3,AIDS,AD3301,Deep Learning,23-03-2026,10:00 AM - 1:00 PM
+3,AIML,ML3301,Neural Networks,23-03-2026,10:00 AM - 1:00 PM
+3,EEE,EE3301,Power Systems,23-03-2026,10:00 AM - 1:00 PM
+4,CSE,CS4401,Software Engineering,23-03-2026,10:00 AM - 1:00 PM
+4,AIDS,AD4401,Advanced AI,23-03-2026,10:00 AM - 1:00 PM
+4,AIML,ML4401,Advanced Machine Learning,23-03-2026,10:00 AM - 1:00 PM
+4,EEE,EE4401,Smart Grid Systems,23-03-2026,10:00 AM - 1:00 PM
+,,,,,

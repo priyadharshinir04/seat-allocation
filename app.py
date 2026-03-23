@@ -1794,6 +1794,13 @@ def student_dashboard():
         student_data.get('department')
     )
     
+    # If exam_date and exam_time are not set in config, derive from exam_schedule
+    if exam_schedule:
+        if not config.get('exam_date') or config.get('exam_date') == '':
+            config['exam_date'] = exam_schedule.get('exam_date', 'Not Set')
+        if not config.get('exam_time') or config.get('exam_time') == '':
+            config['exam_time'] = exam_schedule.get('exam_time', 'Not Set')
+    
     return render_template('student-dashboard.html', 
                          student=student_data,
                          bench_mate=bench_mate,
