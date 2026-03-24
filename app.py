@@ -1817,6 +1817,14 @@ def student_dashboard():
     # Get centralized config from session
     config = session.get('exam_config', {})
     
+    # Auto-detect exam type if not in config (for cases where student logs in without admin config)
+    if not config.get('exam_type'):
+        # If student data has seat_position, it's an internal exam; otherwise semester exam
+        if 'seat_position' in student_data:
+            config['exam_type'] = 'internal'
+        else:
+            config['exam_type'] = 'semester'
+    
     # Get exam schedule for student (FEATURE 4: Automatic subject matching)
     exam_schedule = get_exam_schedule_for_student(
         student_data.get('year'),
